@@ -8,7 +8,7 @@ import type { GenerateContentRequest, GenerateContentResponse } from "@/lib/type
 // de una oferta pegada a mano, y devuelve un CV adaptado y una carta de presentación.
 // No inventa experiencia que no esté en el CV base: el prompt lo prohíbe explícitamente.
 export async function POST(req: NextRequest) {
-  const supabase = createClient();
+  const supabase = await createClient();
 
   const {
     data: { user },

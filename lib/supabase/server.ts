@@ -3,8 +3,9 @@ import { cookies } from "next/headers";
 
 // Cliente de Supabase para usar en Server Components, Route Handlers y Server Actions.
 // Lee y escribe la sesión del usuario a través de las cookies de Next.js.
-export function createClient() {
-  const cookieStore = cookies();
+// Next.js 15+ hizo async la API de cookies(), así que esta función también lo es.
+export async function createClient() {
+  const cookieStore = await cookies();
 
   return createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
