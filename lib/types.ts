@@ -1,0 +1,55 @@
+export type ApplicationStatus =
+  | "borrador"
+  | "lista_para_revision"
+  | "enviada"
+  | "en_proceso"
+  | "entrevista"
+  | "rechazada"
+  | "oferta";
+
+export type ApplicationMode = "auto_ats" | "semiauto" | "manual";
+
+export interface Resume {
+  id: string;
+  user_id: string;
+  contenido_base: string; // texto plano estructurado del CV original
+  created_at: string;
+}
+
+export interface JobPosting {
+  id: string;
+  fuente: string; // "adzuna" | "arbeitnow" | "remotive" | "greenhouse" | ...
+  titulo: string;
+  empresa: string;
+  url: string;
+  tipo_ats: string | null; // "greenhouse" | "lever" | "ashby" | "workday" | null
+  remoto: boolean;
+  ubicacion: string | null;
+  descripcion: string | null;
+  fecha_publicacion: string | null;
+  created_at: string;
+}
+
+export interface Application {
+  id: string;
+  user_id: string;
+  job_posting_id: string;
+  resume_id: string;
+  cv_generado: string | null;
+  carta_generada: string | null;
+  estado: ApplicationStatus;
+  modo: ApplicationMode;
+  fecha_envio: string | null;
+  created_at: string;
+}
+
+export interface GenerateContentRequest {
+  resumeId: string;
+  jobPostingId?: string;
+  jobDescriptionText?: string; // usado cuando la oferta se pega a mano en vez de venir del agregador
+}
+
+export interface GenerateContentResponse {
+  cv_generado: string;
+  carta_generada: string;
+}
