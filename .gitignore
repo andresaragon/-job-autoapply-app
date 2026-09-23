@@ -29,3 +29,8 @@ next-env.d.ts
 pipeline/logs/*/
 !pipeline/logs/.gitkeep
 
+# python cache
+__pycache__/
+*.py[cod]
+
+
