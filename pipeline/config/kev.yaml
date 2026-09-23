@@ -1,0 +1,32 @@
+# Configuración de Kev (github.com/jaredpalmer/kev) como capa "System 1"
+# del pipeline: un modelo de decisión chico (0.5B-9B, corre local) que
+# responde preguntas tipadas sobre el diff en ~una pasada, ANTES de
+# gastar una llamada al auditor pesado (Gemini/Antigravity = "System 2").
+#
+# Kev es opcional y de solo-escalada: si no está disponible, el pipeline
+# sigue funcionando igual (solo se salta esta capa) — nunca es un
+# requisito para poder mergear, a diferencia del auditor LLM.
+
+enabled: true
+base_url: "http://127.0.0.1:8008"   # el puerto que uses con `kev.serve --port`
+model: "kev-latest"
+timeout_seconds: 10
+
+# Si Kev no responde o no está prendido, se ignora esta capa y el
+# pipeline sigue directo al auditor — nunca bloquea ni detiene nada.
+fail_open: true
+
+# SEGURIDAD: por defecto, Kev NUNCA reemplaza al auditor LLM — solo se
+# suma como una señal más (y solo puede subir el tier, nunca bajarlo,
+# igual que el auditor). Poner esto en `true` activa un atajo de costo:
+# si Kev está muy seguro de que un cambio tier "auto" está en alcance y
+# no es sensible, se salta la llamada a Gemini/Antigravity y se mergea
+# solo con la lectura de Kev + el build gate. Actívalo solo cuando ya
+# hayas validado que la calibración de Kev es confiable en español para
+# tus proyectos — por ahora sigue siendo out-of-domain para él.
+skip_deep_audit_when_confident: false
+
+# Umbrales usados solo si skip_deep_audit_when_confident: true
+confidence_thresholds:
+  in_scope_min: 0.9       # probabilidad mínima de que el diff no se salió del alcance
+  looks_sensitive_max: 0.1  # probabilidad máxima de que toque algo sensible

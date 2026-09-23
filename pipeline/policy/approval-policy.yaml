@@ -1,0 +1,142 @@
+# Política de aprobación del AI Dev Factory
+#
+# Cada categoría define qué puede pasar automáticamente y qué necesita
+# tu aprobación humana antes de mergear a main. El clasificador
+# (lib/classify_diff.py) etiqueta el diff según los archivos/patrones
+# que toca; el auditor (Gemini/Antigravity) recibe esta misma tabla en
+# su prompt y debe respetar el tier más restrictivo si detecta algo
+# que el clasificador automático no vio.
+#
+# tiers:
+#   auto        -> se aplica el merge sin pedirte nada, si el build/tests pasan
+#                  y el auditor no encuentra problemas de calidad/seguridad
+#   approval    -> el pipeline se detiene y te pide aprobación explícita
+#                  (por ahora: queda la rama abierta + resumen en logs/;
+#                  cuando esté el bot de Telegram, se notifica ahí)
+#   blocked     -> el pipeline nunca aplica el cambio automáticamente,
+#                  pase lo que pase con el auditor o el build. Se reporta
+#                  y se detiene. Ningún agente puede saltarse esto.
+
+version: 1
+
+rules:
+  # --- Tier: auto ---
+  - tier: auto
+    label: "Cambios de UI"
+    match:
+      # ojo: solo page/layout/component — NUNCA app/**/route.* (esos son
+      # backend, no UI, y no deben colarse en este tier aunque vivan
+      # bajo app/). El proyecto usa JS/JSX puro, no TSX, así que hay que
+      # cubrir ambas extensiones. "**/" también matchea en la raíz del
+      # repo (ver matches_any() en classify_diff.py).
+      paths:
+        - "**/*.css"
+        - "**/*.scss"
+        - "app/**/page.js"
+        - "app/**/page.jsx"
+        - "app/**/page.tsx"
+        - "app/**/layout.js"
+        - "app/**/layout.jsx"
+        - "app/**/layout.tsx"
+        - "components/**/*.js"
+        - "components/**/*.jsx"
+        - "components/**/*.tsx"
+      exclude_paths:
+        - "**/auth/**"
+        - "**/payments/**"
+        - "**/checkout/**"
+
+  - tier: auto
+    label: "Crear componente nuevo (sin tocar lógica de negocio sensible)"
+    match:
+      paths:
+        - "components/**"
+      exclude_paths:
+        - "**/auth/**"
+        - "**/payments/**"
+
+  - tier: auto
+    label: "Corregir bug (sin migraciones ni cambios de esquema)"
+    match:
+      change_type: "bugfix"
+
+  - tier: auto
+    label: "Actualizar o agregar tests"
+    match:
+      paths:
+        - "**/*.test.ts"
+        - "**/*.test.tsx"
+        - "**/*.test.js"
+        - "**/*.test.jsx"
+        - "**/*.spec.ts"
+        - "**/*.spec.js"
+        - "tests/**"
+        - "__tests__/**"
+
+  # --- Tier: approval ---
+  - tier: approval
+    label: "Cambiar base de datos / esquema"
+    match:
+      paths:
+        - "supabase/migrations/**"
+        - "**/schema.sql"
+        - "**/*.prisma"
+        - "db/**"
+
+  - tier: approval
+    label: "Cambiar autenticación"
+    match:
+      paths:
+        - "**/auth/**"
+        - "**/middleware.ts"
+        - "**/*auth*.ts"
+        - "**/*auth*.tsx"
+
+  - tier: approval
+    label: "Cambiar lógica de pagos"
+    match:
+      paths:
+        - "**/payments/**"
+        - "**/billing/**"
+        - "**/checkout/**"
+        - "**/stripe/**"
+
+  - tier: approval
+    label: "Cambiar configuración de producción / infraestructura"
+    match:
+      paths:
+        - "docker-compose*.yml"
+        - "Dockerfile*"
+        - ".github/workflows/**"
+        - "vercel.json"
+        - "next.config.*"
+
+  # --- Tier: blocked ---
+  - tier: blocked
+    label: "Tocar secretos o credenciales"
+    match:
+      paths:
+        - "**/.env"
+        - "**/.env.*"
+        - "**/*secret*"
+        - "**/*credential*"
+        - "**/*.pem"
+        - "**/*.key"
+      # excepción explícita: los .env.example nunca tienen secretos reales
+      exclude_paths:
+        - "**/.env.example"
+        - "**/.env.sample"
+
+  - tier: blocked
+    label: "Modificar el propio pipeline de aprobación"
+    match:
+      paths:
+        - "pipeline/policy/**"
+        - "pipeline/orchestrator.sh"
+    note: >
+      Ningún agente puede subirse su propio nivel de permisos. Cambios a
+      este archivo o al orquestador SIEMPRE requieren que tú los hagas
+      o los apruebes manualmente fuera del pipeline.
+
+# Si el diff no matchea ninguna regla, se usa este default.
+default_tier: approval
