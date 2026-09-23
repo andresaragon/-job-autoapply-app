@@ -97,11 +97,12 @@ def triage(config: dict, task: str, diff_text: str, changed_files: list[str]) ->
     except KevUnavailable as e:
         return {"available": False, "reason": str(e)}
 
+    answers = raw.get("answers", raw)
     try:
-        in_scope_p = float(raw["in_scope"]["noul"])
-        sensitive_p = float(raw["looks_sensitive"]["noul"])
-        tier_choice = raw["suggested_tier"]["choice"]
-        tier_confidence = float(raw["suggested_tier"]["confidence"])
+        in_scope_p = float(answers["in_scope"]["noul"])
+        sensitive_p = float(answers["looks_sensitive"]["noul"])
+        tier_choice = answers["suggested_tier"]["choice"]
+        tier_confidence = float(answers["suggested_tier"]["confidence"])
     except (KeyError, TypeError, ValueError) as e:
         return {"available": False, "reason": f"respuesta de Kev con forma inesperada: {e}", "raw": raw}
 
