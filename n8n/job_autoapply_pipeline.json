@@ -1,0 +1,306 @@
+{
+  "name": "Job AutoApply · Radar Diario & Asistente Telegram",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "0 8 * * *"
+            }
+          ]
+        }
+      },
+      "id": "1a2b3c4d-5e6f-4a1b-8c2d-9e0f1a2b3c4d",
+      "name": "Cron Diario 08:00 COT",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        100,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "job-autoapply-trigger",
+        "options": {}
+      },
+      "id": "2b3c4d5e-6f7a-4b2c-9d3e-0f1a2b3c4d5e",
+      "name": "Disparo Manual / Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        100,
+        500
+      ],
+      "webhookId": "job-autoapply-manual-trigger"
+    },
+    {
+      "parameters": {
+        "mode": "manual",
+        "duplicateItem": false,
+        "assignments": {
+          "assignments": [
+            {
+              "id": "param-app-url",
+              "name": "app_url",
+              "value": "={{ $env.JOB_AUTOAPPLY_URL || 'http://localhost:3000' }}",
+              "type": "string"
+            },
+            {
+              "id": "param-webhook-secret",
+              "name": "webhook_secret",
+              "value": "={{ $env.JOB_AUTOAPPLY_SECRET || 'tu_token_secreto_para_n8n' }}",
+              "type": "string"
+            },
+            {
+              "id": "param-telegram-chat-id",
+              "name": "telegram_chat_id",
+              "value": "={{ $env.TELEGRAM_CHAT_ID || '123456789' }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "3c4d5e6f-7a8b-4c3d-0e4f-1a2b3c4d5e6f",
+      "name": "Configuración Pipeline",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        340,
+        400
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $('Configuración Pipeline').first().json.app_url }}/api/webhooks/n8n",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "x-webhook-secret",
+              "value": "={{ $('Configuración Pipeline').first().json.webhook_secret }}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "{\n  \"action\": \"sync_jobs\"\n}",
+        "options": {
+          "timeout": 35000
+        }
+      },
+      "id": "4d5e6f7a-8b9c-4d0e-1f2a-2b3c4d5e6f7a",
+      "name": "HTTP · Sincronizar Vacantes",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        560,
+        400
+      ],
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $('Configuración Pipeline').first().json.app_url }}/api/webhooks/n8n",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "x-webhook-secret",
+              "value": "={{ $('Configuración Pipeline').first().json.webhook_secret }}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"action\": \"telegram_digest\",\n  \"base_url\": \"{{ $('Configuración Pipeline').first().json.app_url }}\"\n}",
+        "options": {
+          "timeout": 15000
+        }
+      },
+      "id": "5e6f7a8b-9c0d-4e1f-2a3b-3c4d5e6f7a8b",
+      "name": "HTTP · Telegram Digest",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        780,
+        400
+      ],
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $('Configuración Pipeline').first().json.app_url }}/api/webhooks/n8n",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "x-webhook-secret",
+              "value": "={{ $('Configuración Pipeline').first().json.webhook_secret }}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "{\n  \"action\": \"get_pending\"\n}",
+        "options": {
+          "timeout": 15000
+        }
+      },
+      "id": "6f7a8b9c-0d1e-4f2a-3b4c-4d5e6f7a8b9c",
+      "name": "HTTP · Consultar Pendientes",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1000,
+        400
+      ],
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "jsCode": "// Extraer datos de los nodos anteriores encadenados linealmente\nconst config = $('Configuración Pipeline').first().json;\nconst syncData = $('HTTP · Sincronizar Vacantes').first().json || {};\nconst digestData = $('HTTP · Telegram Digest').first().json || {};\nconst pendingData = $('HTTP · Consultar Pendientes').first().json || {};\n\nconst syncResult = syncData.result || {};\nconst totalSynced = syncResult.totalSynced || 0;\nconst sources = syncResult.sources || { remotive: 0, arbeitnow: 0 };\n\nconst pendingList = pendingData.pending_applications || [];\nconst pendingCount = pendingData.count || pendingList.length || 0;\n\nconst jobs = digestData.jobs || [];\n\n// Construir mensaje Markdown seguro para Telegram (evitando caracteres reservados sin emparejar)\nlet text = '☀️ *Radar Diario de Empleos — JobAutoApply*\\n';\ntext += `📅 _${new Date().toLocaleDateString('es-CO', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}_\\n\\n`;\n\ntext += '🔄 *Sincronización de Vacantes:*\\n';\ntext += `• Total nuevas procesadas: *${totalSynced}* ofertas\\n`;\ntext += `• Remotive: *${sources.remotive || 0}* | Arbeitnow: *${sources.arbeitnow || 0}*\\n\\n`;\n\ntext += '🎯 *Top Ofertas Recientes con ATS Detectado:*\\n';\nif (jobs.length === 0) {\n  text += '_No hay vacantes nuevas en este ciclo._\\n\\n';\n} else {\n  jobs.slice(0, 5).forEach((j, idx) => {\n    const safeTitle = (j.titulo || 'Vacante').replace(/[_*[\\]`]/g, ' ').trim();\n    const safeEmpresa = (j.empresa || 'Empresa').replace(/[_*[\\]`]/g, ' ').trim();\n    const ats = j.tipo_ats ? ` 🏷️ \\`[ATS: ${j.tipo_ats.toUpperCase()}]\\`` : '';\n    const remoto = j.remoto ? ' 🌍 _Remoto_' : '';\n    text += `*${idx + 1}. ${safeTitle}*\\n`;\n    text += `🏢 *${safeEmpresa}*${remoto}${ats}\\n`;\n    text += `🔗 [Ver Oferta](${j.url}) | ⚡ [Postular con IA](${j.deep_link})\\n\\n`;\n  });\n}\n\ntext += '📋 *Estado de Postulaciones:*\\n';\nif (pendingCount > 0) {\n  text += `⚠️ Tienes *${pendingCount} postulación(es)* pendientes en estado borrador o revisión.\\n`;\n} else {\n  text += '✅ Todas tus postulaciones están al día.\\n';\n}\n\n// Construir teclado de botones interactivos (Inline Keyboard)\nconst inlineKeyboard = [\n  [\n    { text: '🚀 Abrir Dashboard Web', url: `${config.app_url}/dashboard` },\n    { text: `📋 Mis Postulaciones (${pendingCount})`, url: `${config.app_url}/dashboard/applications` }\n  ],\n  [\n    { text: '🔍 Explorar Catálogo de Vacantes', url: `${config.app_url}/dashboard/jobs` }\n  ]\n];\n\nreturn [{\n  json: {\n    chat_id: config.telegram_chat_id,\n    telegram_text: text,\n    inline_keyboard: inlineKeyboard,\n    total_synced: totalSynced,\n    pending_count: pendingCount,\n    jobs_count: jobs.length\n  }\n}];"
+      },
+      "id": "7a8b9c0d-1e2f-4a3b-4c5d-5e6f7a8b9c0d",
+      "name": "Code · Ensamblar Mensaje y Botones",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1220,
+        400
+      ]
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $json.chat_id }}",
+        "text": "={{ $json.telegram_text }}",
+        "additionalFields": {
+          "parse_mode": "Markdown",
+          "disable_web_page_preview": true,
+          "reply_markup": "inlineKeyboard",
+          "inline_keyboard": {
+            "rows": "={{ $json.inline_keyboard.map(row => ({ row: { buttons: row.map(b => ({ text: b.text, additionalFields: { url: b.url } })) } })) }}"
+          }
+        }
+      },
+      "id": "8b9c0d1e-2f3a-4b4c-5d6e-6f7a8b9c0d1e",
+      "name": "Telegram · Enviar Alerta",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        1440,
+        400
+      ],
+      "credentials": {
+        "telegramApi": {
+          "id": "telegram-bot-jobautoapply",
+          "name": "Telegram Bot (JobAutoApply)"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Cron Diario 08:00 COT": {
+      "main": [
+        [
+          {
+            "node": "Configuración Pipeline",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Disparo Manual / Webhook": {
+      "main": [
+        [
+          {
+            "node": "Configuración Pipeline",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Configuración Pipeline": {
+      "main": [
+        [
+          {
+            "node": "HTTP · Sincronizar Vacantes",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP · Sincronizar Vacantes": {
+      "main": [
+        [
+          {
+            "node": "HTTP · Telegram Digest",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP · Telegram Digest": {
+      "main": [
+        [
+          {
+            "node": "HTTP · Consultar Pendientes",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP · Consultar Pendientes": {
+      "main": [
+        [
+          {
+            "node": "Code · Ensamblar Mensaje y Botones",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code · Ensamblar Mensaje y Botones": {
+      "main": [
+        [
+          {
+            "node": "Telegram · Enviar Alerta",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "America/Bogota",
+    "saveManualExecutions": true,
+    "callerPolicy": "workflowsFromSameOwner"
+  }
+}

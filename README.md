@@ -31,9 +31,11 @@ y puente de webhooks para automatizaciones con n8n y Telegram.
   - Mapeo determinista de campos para Greenhouse, Lever, Ashby y formularios genéricos.
   - Generador de inyector JavaScript (one-click copy) que dispara eventos reactivos del DOM (`input`/`change`) y resalta campos completados en verde.
   - Script runner con Playwright (`worker/autoapply-playwright.mjs`) para ejecución automatizada headless/headed desde terminal o VPS.
-- **Puente de Webhooks para n8n & Telegram (`app/api/webhooks/n8n/route.ts`):**
+- **Puente de Webhooks y Automatización n8n (`app/api/webhooks/n8n/route.ts` & `n8n/`):**
   - Endpoint protegido por token de webhook (`x-webhook-secret`).
-  - Soporta acciones: `sync_jobs`, `get_pending`, `update_status` y `telegram_digest` (resumen formateado en Markdown para bots de Telegram).
+  - Soporta acciones: `sync_jobs`, `get_pending`, `update_status` y `telegram_digest` (resumen formateado en Markdown para bots de Telegram con enlaces directos para postular con IA).
+  - **Template exportable n8n (`n8n/job_autoapply_pipeline.json`):** Workflow listo para importar en la VPS de Oracle Cloud (n8n v2.40+) con cron diario a las 8:00 AM COT, ingesta automática de vacantes, digest matutino y alertas interactivas a Telegram con teclado inline.
+  - Guía completa de importación paso a paso en [`n8n/README.md`](n8n/README.md).
 - **Navbar reactiva:** Indicador de estado de sesión, correo del usuario, créditos disponibles en tiempo real y navegación fluida.
 - **Arquitectura de IA Tri-Híbrida:**
   - **Local On-Device ($0 / Offline):** Ollama con `qwen2.5:7b` corriendo en tu GPU local (RTX 4060).

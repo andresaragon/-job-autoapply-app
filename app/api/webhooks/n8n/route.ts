@@ -106,29 +106,48 @@ export async function POST(req: NextRequest) {
       }
 
       case "telegram_digest": {
+        const baseUrl =
+          body.base_url ||
+          new URL(req.url).searchParams.get("base_url") ||
+          process.env.NEXT_PUBLIC_APP_URL ||
+          "http://localhost:3000";
+
         const { data: latestJobs, error } = await serviceClient
           .from("job_postings")
-          .select("id, titulo, empresa, url, tipo_ats, remoto, ubicacion")
-          .order("fecha_publicacion", { ascending: false })
+          .select("id, titulo, empresa, url, tipo_ats, remoto, ubicacion, created_at")
+          .order("created_at", { ascending: false })
           .limit(5);
 
         if (error) {
           return NextResponse.json({ error: error.message }, { status: 500 });
         }
 
-        let message = "🎯 *Nuevas vacantes disponibles para postular:*\n\n";
-        (latestJobs || []).forEach((job, idx) => {
-          const atsBadge = job.tipo_ats ? ` [ATS: ${job.tipo_ats}]` : "";
-          const remoteBadge = job.remoto ? " 🌍 Remoto" : "";
-          message += `${idx + 1}. *${job.titulo}* en *${job.empresa}*${remoteBadge}${atsBadge}\n🔗 [Ver oferta](${job.url})\n\n`;
+        const enrichedJobs = (latestJobs || []).map((job) => {
+          const cleanTitle = (job.titulo || "Vacante").replace(/[_*[\]`]/g, " ").trim();
+          const cleanEmpresa = (job.empresa || "Empresa").replace(/[_*[\]`]/g, " ").trim();
+          return {
+            ...job,
+            titulo: cleanTitle,
+            empresa: cleanEmpresa,
+            deep_link: `${baseUrl}/dashboard?job_id=${job.id}`,
+          };
         });
-        message += "⚡ _Genera tus documentos desde el panel de JobAutoApply._";
+
+        let message = "🎯 *Radar de Empleos — JobAutoApply*\n\n";
+        enrichedJobs.forEach((job, idx) => {
+          const atsBadge = job.tipo_ats ? ` 🏷️ \`[ATS: ${job.tipo_ats.toUpperCase()}]\`` : "";
+          const remoteBadge = job.remoto ? " 🌍 _Remoto_" : "";
+          message += `*${idx + 1}. ${job.titulo}*\n`;
+          message += `🏢 *${job.empresa}*${remoteBadge}${atsBadge}\n`;
+          message += `🔗 [Ver Oferta Original](${job.url}) | ⚡ [Postular con IA](${job.deep_link})\n\n`;
+        });
+        message += "💡 _Haz clic en 'Postular con IA' para precargar la oferta en tu panel y generar tu CV adaptado._";
 
         return NextResponse.json({
           action: "telegram_digest",
-          count: latestJobs?.length || 0,
+          count: enrichedJobs.length,
           formatted_telegram_markdown: message,
-          jobs: latestJobs || [],
+          jobs: enrichedJobs,
         });
       }
 
