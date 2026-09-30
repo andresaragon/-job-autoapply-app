@@ -10,7 +10,7 @@ create table if not exists public.subscriptions (
   id uuid primary key default uuid_generate_v4(),
   user_id uuid not null references auth.users(id) on delete cascade,
   plan text not null default 'free' check (plan in ('free', 'pro')),
-  creditos_disponibles integer not null default 5,
+  creditos_disponibles integer not null default 5 check (creditos_disponibles >= 0),
   fecha_renovacion date,
   created_at timestamptz not null default now(),
   unique (user_id)
@@ -57,15 +57,23 @@ create table if not exists public.applications (
   created_at timestamptz not null default now()
 );
 
--- Auditoría y control de costo de cada llamada a la API de generación (Claude).
+-- Auditoría y control de costo de cada llamada a la API de generación (Claude / Gemini).
 create table if not exists public.ai_generations (
   id uuid primary key default uuid_generate_v4(),
   user_id uuid not null references auth.users(id) on delete cascade,
   tipo text not null, -- 'cv' | 'carta' | 'entrevista'
+  proveedor text not null default 'anthropic', -- 'anthropic' | 'gemini'
   tokens_entrada integer,
   tokens_salida integer,
   created_at timestamptz not null default now()
 );
+
+-- Índices para optimizar consultas y políticas de RLS basadas en auth.uid()
+create index if not exists idx_resumes_user_id on public.resumes(user_id);
+create index if not exists idx_applications_user_id on public.applications(user_id);
+create index if not exists idx_applications_job_posting_id on public.applications(job_posting_id);
+create index if not exists idx_ai_generations_user_id on public.ai_generations(user_id);
+create index if not exists idx_job_postings_fecha on public.job_postings(fecha_publicacion desc);
 
 -- Row Level Security: cada usuario solo ve y modifica sus propias filas.
 -- job_postings es de lectura pública porque es el catálogo compartido de vacantes.
@@ -105,6 +113,12 @@ create policy "usuarios ven sus propios cv"
 create policy "usuarios crean sus propios cv"
   on public.resumes for insert
   with check (auth.uid() = user_id);
+create policy "usuarios actualizan sus propios cv"
+  on public.resumes for update
+  using (auth.uid() = user_id);
+create policy "usuarios eliminan sus propios cv"
+  on public.resumes for delete
+  using (auth.uid() = user_id);
 
 create policy "cualquiera autenticado lee vacantes"
   on public.job_postings for select

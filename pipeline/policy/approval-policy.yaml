@@ -26,8 +26,8 @@ rules:
     match:
       # ojo: solo page/layout/component — NUNCA app/**/route.* (esos son
       # backend, no UI, y no deben colarse en este tier aunque vivan
-      # bajo app/). El proyecto usa JS/JSX puro, no TSX, así que hay que
-      # cubrir ambas extensiones. "**/" también matchea en la raíz del
+      # bajo app/). El proyecto usa TypeScript/TSX y soporta componentes JSX/JS,
+      # cubriendo ambas extensiones. "**/" también matchea en la raíz del
       # repo (ver matches_any() en classify_diff.py).
       paths:
         - "**/*.css"

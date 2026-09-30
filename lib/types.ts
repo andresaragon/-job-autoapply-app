@@ -47,9 +47,11 @@ export interface GenerateContentRequest {
   resumeId: string;
   jobPostingId?: string;
   jobDescriptionText?: string; // usado cuando la oferta se pega a mano en vez de venir del agregador
+  preferredProvider?: "auto" | "ollama" | "anthropic" | "gemini";
 }
 
 export interface GenerateContentResponse {
   cv_generado: string;
   carta_generada: string;
+  provider?: "ollama" | "anthropic" | "gemini";
 }

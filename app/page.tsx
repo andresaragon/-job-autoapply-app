@@ -1,3 +1,5 @@
+import Link from "next/link";
+
 export default function LandingPage() {
   return (
     <main className="mx-auto flex min-h-screen max-w-3xl flex-col items-center justify-center gap-6 px-6 text-center">
@@ -9,12 +11,12 @@ export default function LandingPage() {
         segundos una versión adaptada de tu CV y una carta de presentación
         específica, y lleva el seguimiento de cada aplicación en un solo lugar.
       </p>
-      <a
+      <Link
         href="/dashboard"
-        className="rounded-lg bg-indigo-500 px-6 py-3 font-medium text-white hover:bg-indigo-400"
+        className="rounded-lg bg-indigo-500 px-6 py-3 font-medium text-white transition-colors hover:bg-indigo-400"
       >
         Ir al panel
-      </a>
+      </Link>
     </main>
   );
 }

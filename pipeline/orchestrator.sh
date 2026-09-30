@@ -62,8 +62,8 @@ cd "$REPO_PATH"
 
 # ---------- checks previos ----------
 
-if ! command -v claude >/dev/null 2>&1; then
-  log "ERROR: no se encontró el CLI 'claude' en el PATH."
+if ! command -v claude >/dev/null 2>&1 && ! command -v antigravity >/dev/null 2>&1 && ! command -v gemini >/dev/null 2>&1; then
+  log "ERROR: no se encontró ningún CLI de construcción ('claude', 'antigravity' ni 'gemini') en el PATH."
   exit 1
 fi
 
@@ -127,26 +127,51 @@ CODER_PROMPT="$(cat "$PROMPTS_DIR/coder_system_prompt.md")
 
 $TASK"
 
-log "Llamando a Claude Code (coder)..."
-set +e
-claude -p "$CODER_PROMPT" \
-  --permission-mode acceptEdits \
-  --output-format json \
-  --allowedTools "Edit,Write,Read,Glob,Grep" \
-  > "$RUN_LOG_DIR/coder_output.json" 2>"$RUN_LOG_DIR/coder_stderr.log"
-CODER_EXIT=$?
-set -e
+CODER_EXIT=1
+if command -v claude >/dev/null 2>&1; then
+  log "Llamando a Claude Code (coder primario)..."
+  set +e
+  claude -p "$CODER_PROMPT" \
+    --permission-mode acceptEdits \
+    --output-format json \
+    --allowedTools "Edit,Write,Read,Glob,Grep" \
+    > "$RUN_LOG_DIR/coder_output.json" 2>"$RUN_LOG_DIR/coder_stderr.log"
+  CODER_EXIT=$?
+  set -e
+fi
 
 if [[ $CODER_EXIT -ne 0 ]]; then
-  log "ERROR: claude -p terminó con código $CODER_EXIT. Ver $RUN_LOG_DIR/coder_stderr.log"
+  log "AVISO: Coder primario falló o no está disponible (código $CODER_EXIT). Evaluando respaldo..."
+  if command -v antigravity >/dev/null 2>&1; then
+    log "Invocando Antigravity CLI (coder de respaldo)..."
+    set +e
+    antigravity -p "$CODER_PROMPT" > "$RUN_LOG_DIR/coder_output.json" 2>"$RUN_LOG_DIR/coder_stderr.log"
+    CODER_EXIT=$?
+    set -e
+  elif command -v gemini >/dev/null 2>&1; then
+    log "Invocando Gemini CLI (coder de respaldo)..."
+    set +e
+    gemini -p "$CODER_PROMPT" > "$RUN_LOG_DIR/coder_output.json" 2>"$RUN_LOG_DIR/coder_stderr.log"
+    CODER_EXIT=$?
+    set -e
+  fi
+fi
+
+if [[ $CODER_EXIT -ne 0 ]]; then
+  log "ERROR: tanto el coder primario como el respaldo fallaron al ejecutarse."
   rollback_and_exit "el coder falló al ejecutarse"
 fi
 
 CODER_SUMMARY="$(python3 -c "
 import json
 try:
-    d = json.load(open('$RUN_LOG_DIR/coder_output.json'))
-    print(d.get('result', '(sin resumen)'))
+    content = open('$RUN_LOG_DIR/coder_output.json', encoding='utf-8').read().strip()
+    try:
+        d = json.loads(content)
+        print(d.get('result', d.get('summary', str(d))))
+    except Exception:
+        lines = [l.strip() for l in content.splitlines() if l.strip()]
+        print(' '.join(lines[-3:]) if lines else '(sin resumen)')
 except Exception as e:
     print(f'(no se pudo leer el resumen: {e})')
 ")"
