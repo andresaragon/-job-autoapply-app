@@ -136,6 +136,16 @@ export default function Navbar() {
               >
                 Mis CVs
               </Link>
+              <Link
+                href="/dashboard/profile"
+                className={`transition-colors ${
+                  pathname === "/dashboard/profile"
+                    ? "text-indigo-400"
+                    : "text-slate-400 hover:text-slate-200"
+                }`}
+              >
+                Mi Perfil
+              </Link>
             </nav>
           )}
         </div>

@@ -72,3 +72,30 @@ export interface SyncJobsResult {
   errors?: string[];
 }
 
+export interface UserProfile {
+  id: string;
+  user_id: string;
+  nombre_completo: string | null;
+  telefono: string | null;
+  linkedin_url: string | null;
+  github_url: string | null;
+  portafolio_url: string | null;
+  ubicacion: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface AtsFieldMapping {
+  field: string;
+  selector: string;
+  value: string;
+}
+
+export interface AtsAutoFillPayload {
+  ats: string;
+  targetUrl: string;
+  fields: AtsFieldMapping[];
+  script: string;
+}
+
+

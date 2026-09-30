@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useCallback } from "react";
 import Link from "next/link";
-import type { ApplicationStatus, ApplicationWithJob } from "@/lib/types";
+import type { ApplicationStatus, ApplicationWithJob, AtsAutoFillPayload } from "@/lib/types";
 
 const STATUS_CONFIG: Record<
   ApplicationStatus,
@@ -63,6 +63,13 @@ export default function ApplicationsPage() {
   const [copiedCv, setCopiedCv] = useState(false);
   const [copiedCarta, setCopiedCarta] = useState(false);
 
+  // Modal para Auto-Fill ATS
+  const [autofillApp, setAutofillApp] = useState<ApplicationWithJob | null>(null);
+  const [autofillData, setAutofillData] = useState<AtsAutoFillPayload | null>(null);
+  const [loadingAutofill, setLoadingAutofill] = useState(false);
+  const [copiedScript, setCopiedScript] = useState(false);
+  const [copiedPlaywright, setCopiedPlaywright] = useState(false);
+
   const fetchApplications = useCallback(async () => {
     setLoading(true);
     setError(null);
@@ -119,6 +126,7 @@ export default function ApplicationsPage() {
       }
       setApplications((prev) => prev.filter((app) => app.id !== id));
       if (viewingApp?.id === id) setViewingApp(null);
+      if (autofillApp?.id === id) setAutofillApp(null);
     } catch (err) {
       alert(err instanceof Error ? err.message : "Error al eliminar");
     }
@@ -135,6 +143,42 @@ export default function ApplicationsPage() {
     }
   }
 
+  async function handleOpenAutofill(app: ApplicationWithJob) {
+    setAutofillApp(app);
+    setLoadingAutofill(true);
+    setAutofillData(null);
+    setCopiedScript(false);
+    setCopiedPlaywright(false);
+
+    try {
+      const res = await fetch(`/api/worker/autofill?application_id=${app.id}`);
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || "No se pudo preparar el auto-fill");
+      }
+      setAutofillData(data.payload);
+    } catch (err) {
+      alert(err instanceof Error ? err.message : "Error al obtener datos de auto-llenado");
+    } finally {
+      setLoadingAutofill(false);
+    }
+  }
+
+  function handleCopyScript() {
+    if (!autofillData?.script) return;
+    navigator.clipboard.writeText(autofillData.script);
+    setCopiedScript(true);
+    setTimeout(() => setCopiedScript(false), 2000);
+  }
+
+  function handleCopyPlaywrightCmd() {
+    if (!autofillApp) return;
+    const cmd = `node worker/autoapply-playwright.mjs --appId ${autofillApp.id} --secret local-worker`;
+    navigator.clipboard.writeText(cmd);
+    setCopiedPlaywright(true);
+    setTimeout(() => setCopiedPlaywright(false), 2000);
+  }
+
   return (
     <main className="mx-auto max-w-5xl px-6 py-10">
       {/* Header */}
@@ -142,11 +186,17 @@ export default function ApplicationsPage() {
         <div>
           <h1 className="text-2xl font-bold tracking-tight text-white">Mis Postulaciones</h1>
           <p className="mt-1 text-sm text-slate-400">
-            Control y seguimiento de todas las vacantes a las que te has postulado o preparado
+            Control, seguimiento y automatización de postulación con asistente ATS
           </p>
         </div>
 
         <div className="flex items-center gap-3">
+          <Link
+            href="/dashboard/profile"
+            className="rounded-lg border border-slate-700 bg-slate-900 px-3.5 py-2 text-xs font-medium text-slate-200 transition hover:bg-slate-800 hover:text-white"
+          >
+            Configurar Perfil Candidato
+          </Link>
           <Link
             href="/dashboard/jobs"
             className="rounded-lg border border-slate-700 bg-slate-900 px-3.5 py-2 text-xs font-medium text-slate-200 transition hover:bg-slate-800 hover:text-white"
@@ -216,7 +266,7 @@ export default function ApplicationsPage() {
                         </span>
                       )}
                       {job?.tipo_ats && (
-                        <span className="rounded-full border border-slate-700 bg-slate-800 px-2 py-0.5 text-[10px] uppercase text-slate-300">
+                        <span className="rounded-full border border-indigo-800 bg-indigo-950/70 px-2 py-0.5 text-[10px] font-medium uppercase text-indigo-300">
                           ATS: {job.tipo_ats}
                         </span>
                       )}
@@ -251,12 +301,20 @@ export default function ApplicationsPage() {
                       <option value="oferta">¡Oferta!</option>
                     </select>
 
+                    {/* Botón Auto-Fill ATS */}
+                    <button
+                      onClick={() => handleOpenAutofill(app)}
+                      className="flex items-center gap-1.5 rounded-lg border border-indigo-700 bg-indigo-950/40 px-3 py-1.5 text-xs font-medium text-indigo-300 hover:bg-indigo-900/60 hover:text-white transition"
+                    >
+                      <span>🤖 Auto-Fill ATS</span>
+                    </button>
+
                     {(app.cv_generado || app.carta_generada) && (
                       <button
                         onClick={() => setViewingApp(app)}
                         className="rounded-lg border border-slate-700 bg-slate-800 px-3 py-1.5 text-xs font-medium text-slate-200 transition hover:bg-slate-700 hover:text-white"
                       >
-                        Ver Documentos
+                        Ver Textos
                       </button>
                     )}
 
@@ -284,6 +342,122 @@ export default function ApplicationsPage() {
               </div>
             );
           })}
+        </div>
+      )}
+
+      {/* Modal para Auto-Fill ATS */}
+      {autofillApp && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4 backdrop-blur-sm">
+          <div className="flex max-h-[90vh] w-full max-w-2xl flex-col rounded-2xl border border-indigo-800/80 bg-slate-900 shadow-2xl">
+            <div className="flex items-center justify-between border-b border-slate-800 px-6 py-4">
+              <div>
+                <h3 className="text-base font-bold text-white flex items-center gap-2">
+                  <span>🤖 Asistente Auto-Fill ATS</span>
+                  <span className="rounded bg-indigo-950 border border-indigo-800 px-2 py-0.5 text-[11px] font-medium text-indigo-300 uppercase">
+                    {autofillData?.ats || autofillApp.job_posting?.tipo_ats || "Estándar"}
+                  </span>
+                </h3>
+                <p className="text-xs text-slate-400 mt-0.5">
+                  {autofillApp.job_posting?.titulo} en {autofillApp.job_posting?.empresa}
+                </p>
+              </div>
+              <button
+                onClick={() => setAutofillApp(null)}
+                className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-800 hover:text-white"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="flex-1 space-y-5 overflow-y-auto p-6">
+              {loadingAutofill ? (
+                <div className="h-40 animate-pulse rounded-xl bg-slate-950/50" />
+              ) : autofillData ? (
+                <>
+                  <div className="rounded-xl border border-indigo-900/80 bg-indigo-950/30 p-4 text-xs space-y-2">
+                    <p className="font-semibold text-indigo-300">
+                      ⚡ Modo Semi-Automático (Recomendado y Seguro):
+                    </p>
+                    <ol className="list-decimal pl-4 space-y-1 text-slate-300">
+                      <li>
+                        Abre la página oficial de la oferta haciendo clic en{" "}
+                        <a
+                          href={autofillData.targetUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-indigo-400 underline font-semibold"
+                        >
+                          Abrir Formulario de Oferta ↗
+                        </a>
+                      </li>
+                      <li>
+                        Copia el inyector con el botón de abajo, presiona <kbd className="bg-slate-800 px-1.5 py-0.5 rounded text-[11px]">F12</kbd> (Consola) en la página de la oferta y pégalo (<kbd className="bg-slate-800 px-1.5 py-0.5 rounded text-[11px]">Ctrl+V</kbd> + Enter).
+                      </li>
+                      <li>
+                        ¡Todos los campos se completarán al instante con bordes verdes! Revisa y pulsa Enviar.
+                      </li>
+                    </ol>
+                  </div>
+
+                  {/* Campos que se van a rellenar */}
+                  <div>
+                    <h4 className="text-xs font-semibold uppercase tracking-wider text-slate-400 mb-2">
+                      Campos mapeados listos ({autofillData.fields.length}):
+                    </h4>
+                    <div className="grid grid-cols-2 gap-2 max-h-36 overflow-y-auto rounded-lg border border-slate-800 bg-slate-950 p-3 text-xs">
+                      {autofillData.fields.map((f, i) => (
+                        <div key={i} className="flex items-center gap-1.5 truncate text-slate-300">
+                          <span className="text-emerald-400">✓</span>
+                          <span className="font-medium text-slate-400">{f.field}:</span>
+                          <span className="truncate text-slate-200">{f.value}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Botones de acción */}
+                  <div className="flex flex-col gap-2.5 pt-2">
+                    <div className="flex gap-2">
+                      <button
+                        onClick={handleCopyScript}
+                        className="flex-1 rounded-lg bg-indigo-600 py-2.5 text-xs font-semibold text-white shadow-md shadow-indigo-500/20 hover:bg-indigo-500 transition"
+                      >
+                        {copiedScript ? "✓ ¡Inyector Copiado al Portapapeles!" : "📋 Copiar Inyector JavaScript"}
+                      </button>
+                      <a
+                        href={autofillData.targetUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="rounded-lg border border-slate-700 bg-slate-800 px-4 py-2.5 text-xs font-semibold text-slate-200 hover:bg-slate-700 hover:text-white transition flex items-center gap-1.5"
+                      >
+                        <span>Abrir Oferta</span>
+                        <span>↗</span>
+                      </a>
+                    </div>
+
+                    <div className="border-t border-slate-800/80 pt-3 flex items-center justify-between">
+                      <button
+                        onClick={handleCopyPlaywrightCmd}
+                        className="text-[11px] text-slate-400 hover:text-slate-200 flex items-center gap-1"
+                      >
+                        <span>💻 {copiedPlaywright ? "✓ Comando Playwright copiado" : "Copiar comando Playwright CLI (Headless)"}</span>
+                      </button>
+
+                      <button
+                        onClick={() => {
+                          handleStatusChange(autofillApp.id, "enviada");
+                          setAutofillApp(null);
+                        }}
+                        className="text-xs text-emerald-400 hover:text-emerald-300 underline font-medium"
+                      >
+                        Marcar como enviada ✓
+                      </button>
+                    </div>
+                  </div>
+                </>
+              ) : null}
+            </div>
+          </div>
         </div>
       )}
 
