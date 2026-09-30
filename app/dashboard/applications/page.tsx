@@ -4,6 +4,8 @@ import { useEffect, useState, useCallback } from "react";
 import Link from "next/link";
 import type { ApplicationStatus, ApplicationWithJob, AtsAutoFillPayload } from "@/lib/types";
 import CvPdfModal from "@/components/CvPdfModal";
+import AtsMatchCard from "@/components/AtsMatchCard";
+import { getQuickAtsScore } from "@/lib/ats/matcher";
 
 const STATUS_CONFIG: Record<
   ApplicationStatus,
@@ -272,6 +274,24 @@ export default function ApplicationsPage() {
                           ATS: {job.tipo_ats}
                         </span>
                       )}
+                      {(() => {
+                        const quickAts = getQuickAtsScore(job?.descripcion, app.cv_generado);
+                        if (!quickAts) return null;
+                        const badgeClasses = {
+                          emerald: "border-emerald-800 bg-emerald-950/70 text-emerald-300",
+                          amber: "border-amber-800 bg-amber-950/70 text-amber-300",
+                          orange: "border-orange-800 bg-orange-950/70 text-orange-300",
+                          rose: "border-rose-800 bg-rose-950/70 text-rose-300",
+                        }[quickAts.color];
+                        return (
+                          <span
+                            className={`rounded-full border px-2 py-0.5 text-[10px] font-semibold ${badgeClasses}`}
+                            title={`Match Score ATS: ${quickAts.score}% (${quickAts.grade})`}
+                          >
+                            🎯 Match: {quickAts.score}%
+                          </span>
+                        );
+                      })()}
                     </div>
 
                     <div className="flex flex-wrap items-center gap-2 text-xs text-slate-400">
@@ -485,6 +505,15 @@ export default function ApplicationsPage() {
             </div>
 
             <div className="flex-1 space-y-6 overflow-y-auto p-6">
+              {/* Análisis de Match Score ATS y Palabras Clave */}
+              {viewingApp.job_posting?.descripcion && viewingApp.cv_generado && (
+                <AtsMatchCard
+                  jobDescription={viewingApp.job_posting.descripcion}
+                  cvText={viewingApp.cv_generado}
+                  compact={false}
+                />
+              )}
+
               {viewingApp.cv_generado && (
                 <div>
                   <div className="mb-2 flex items-center justify-between">

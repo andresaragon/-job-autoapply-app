@@ -6,6 +6,7 @@ import { useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import type { GenerateContentResponse, JobPosting, Resume } from "@/lib/types";
 import CvPdfModal from "@/components/CvPdfModal";
+import AtsMatchCard from "@/components/AtsMatchCard";
 
 function DashboardContent() {
   const searchParams = useSearchParams();
@@ -442,6 +443,12 @@ function DashboardContent() {
               {savedAppError}
             </div>
           )}
+
+          {/* Análisis de Match Score ATS y Palabras Clave */}
+          <AtsMatchCard
+            jobDescription={jobDescriptionText}
+            cvText={result.cv_generado}
+          />
 
           <section>
             <div className="mb-2 flex items-center justify-between">

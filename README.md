@@ -23,6 +23,10 @@ y puente de webhooks para automatizaciones con n8n y Telegram.
 - **Exportador de CV a PDF ATS-Friendly (`components/CvPdfModal.tsx`):**
   - Visor con estilos tipográficos (ATS Minimalista, Ejecutivo Serif, Clásico).
   - Formateo de viñetas, secciones semánticas y exportación nativa a PDF (formato Carta) con diseño de una sola columna sin tablas que garantiza máxima puntuación de legibilidad en parsers ATS.
+- **Score de Match ATS & Keyword Analyzer (`lib/ats/matcher.ts` & `components/AtsMatchCard.tsx`):**
+  - Motor determinista de cálculo de concordancia léxica y semántica entre la vacante y el CV adaptado.
+  - Indicador visual interactivo de porcentaje (0-100%), nivel (*Excelente, Bueno, Regular, Bajo*) y desglose por Hard Skills, Soft Skills / Metodologías y Métricas Cuantitativas.
+  - Pestañas de palabras clave coincidentes vs. ausentes (con botón de copia en 1 clic) y sugerencias de optimización inmediata para superar los filtros de contratación.
 - **Asistente Auto-Fill ATS (`lib/worker/ats/filler.ts` & `/api/worker/autofill`):**
   - Mapeo determinista de campos para Greenhouse, Lever, Ashby y formularios genéricos.
   - Generador de inyector JavaScript (one-click copy) que dispara eventos reactivos del DOM (`input`/`change`) y resalta campos completados en verde.
