@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback } from "react";
 import Link from "next/link";
 import type { ApplicationStatus, ApplicationWithJob, AtsAutoFillPayload } from "@/lib/types";
+import CvPdfModal from "@/components/CvPdfModal";
 
 const STATUS_CONFIG: Record<
   ApplicationStatus,
@@ -62,6 +63,7 @@ export default function ApplicationsPage() {
   const [viewingApp, setViewingApp] = useState<ApplicationWithJob | null>(null);
   const [copiedCv, setCopiedCv] = useState(false);
   const [copiedCarta, setCopiedCarta] = useState(false);
+  const [showPdfModal, setShowPdfModal] = useState(false);
 
   // Modal para Auto-Fill ATS
   const [autofillApp, setAutofillApp] = useState<ApplicationWithJob | null>(null);
@@ -489,12 +491,20 @@ export default function ApplicationsPage() {
                     <h4 className="text-xs font-semibold uppercase tracking-wider text-indigo-400">
                       CV Adaptado
                     </h4>
-                    <button
-                      onClick={() => handleCopy(viewingApp.cv_generado || "", "cv")}
-                      className="text-xs font-medium text-slate-300 hover:text-white"
-                    >
-                      {copiedCv ? "✓ Copiado" : "Copiar CV"}
-                    </button>
+                    <div className="flex items-center gap-3">
+                      <button
+                        onClick={() => setShowPdfModal(true)}
+                        className="text-xs font-semibold text-emerald-400 hover:text-emerald-300 flex items-center gap-1 transition"
+                      >
+                        <span>📄 Exportar PDF ATS</span>
+                      </button>
+                      <button
+                        onClick={() => handleCopy(viewingApp.cv_generado || "", "cv")}
+                        className="text-xs font-medium text-slate-300 hover:text-white"
+                      >
+                        {copiedCv ? "✓ Copiado" : "Copiar CV"}
+                      </button>
+                    </div>
                   </div>
                   <pre className="whitespace-pre-wrap rounded-xl border border-slate-800 bg-slate-950 p-4 text-xs leading-relaxed text-slate-200">
                     {viewingApp.cv_generado}
@@ -532,6 +542,17 @@ export default function ApplicationsPage() {
             </div>
           </div>
         </div>
+      )}
+
+      {/* Modal de Exportación a PDF para la Postulación Activa */}
+      {viewingApp && (
+        <CvPdfModal
+          isOpen={showPdfModal}
+          onClose={() => setShowPdfModal(false)}
+          cvText={viewingApp.cv_generado || ""}
+          jobTitle={viewingApp.job_posting?.titulo}
+          jobCompany={viewingApp.job_posting?.empresa}
+        />
       )}
     </main>
   );

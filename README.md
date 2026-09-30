@@ -20,6 +20,9 @@ y puente de webhooks para automatizaciones con n8n y Telegram.
   - Registro y guardado de postulaciones adaptadas con CV y carta generados.
   - Gestión de ciclo de vida con estados (*Borrador*, *Lista para revisión*, *Enviada*, *En Proceso*, *Entrevista*, *Rechazada*, *¡Oferta!*).
   - Visor modal para inspeccionar y copiar los documentos generados.
+- **Exportador de CV a PDF ATS-Friendly (`components/CvPdfModal.tsx`):**
+  - Visor con estilos tipográficos (ATS Minimalista, Ejecutivo Serif, Clásico).
+  - Formateo de viñetas, secciones semánticas y exportación nativa a PDF (formato Carta) con diseño de una sola columna sin tablas que garantiza máxima puntuación de legibilidad en parsers ATS.
 - **Asistente Auto-Fill ATS (`lib/worker/ats/filler.ts` & `/api/worker/autofill`):**
   - Mapeo determinista de campos para Greenhouse, Lever, Ashby y formularios genéricos.
   - Generador de inyector JavaScript (one-click copy) que dispara eventos reactivos del DOM (`input`/`change`) y resalta campos completados en verde.

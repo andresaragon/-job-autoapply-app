@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import type { GenerateContentResponse, JobPosting, Resume } from "@/lib/types";
+import CvPdfModal from "@/components/CvPdfModal";
 
 function DashboardContent() {
   const searchParams = useSearchParams();
@@ -20,6 +21,7 @@ function DashboardContent() {
   const [loading, setLoading] = useState(false);
   const [loadingResumes, setLoadingResumes] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [showCvPdfModal, setShowCvPdfModal] = useState(false);
 
   // Guardado en Mis Postulaciones
   const [savingApp, setSavingApp] = useState(false);
@@ -444,12 +446,21 @@ function DashboardContent() {
           <section>
             <div className="mb-2 flex items-center justify-between">
               <h3 className="font-semibold text-slate-300">CV Adaptado para la Oferta</h3>
-              <button
-                onClick={() => navigator.clipboard.writeText(result.cv_generado)}
-                className="text-xs font-medium text-indigo-400 hover:text-indigo-300"
-              >
-                Copiar texto
-              </button>
+              <div className="flex items-center gap-3">
+                <button
+                  type="button"
+                  onClick={() => setShowCvPdfModal(true)}
+                  className="flex items-center gap-1 text-xs font-semibold text-emerald-400 hover:text-emerald-300 transition"
+                >
+                  <span>📄 Exportar PDF ATS</span>
+                </button>
+                <button
+                  onClick={() => navigator.clipboard.writeText(result.cv_generado)}
+                  className="text-xs font-medium text-indigo-400 hover:text-indigo-300"
+                >
+                  Copiar texto
+                </button>
+              </div>
             </div>
             <pre className="whitespace-pre-wrap rounded-lg border border-slate-800 bg-slate-900/90 p-4 text-xs leading-relaxed text-slate-200">
               {result.cv_generado}
@@ -470,6 +481,15 @@ function DashboardContent() {
               {result.carta_generada}
             </pre>
           </section>
+
+          {/* Modal de Exportación a PDF */}
+          <CvPdfModal
+            isOpen={showCvPdfModal}
+            onClose={() => setShowCvPdfModal(false)}
+            cvText={result.cv_generado}
+            jobTitle={selectedJob?.titulo}
+            jobCompany={selectedJob?.empresa}
+          />
         </div>
       )}
     </main>
