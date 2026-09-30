@@ -74,6 +74,8 @@ create index if not exists idx_applications_user_id on public.applications(user_
 create index if not exists idx_applications_job_posting_id on public.applications(job_posting_id);
 create index if not exists idx_ai_generations_user_id on public.ai_generations(user_id);
 create index if not exists idx_job_postings_fecha on public.job_postings(fecha_publicacion desc);
+create index if not exists idx_job_postings_remoto on public.job_postings(remoto);
+create index if not exists idx_job_postings_fuente on public.job_postings(fuente);
 
 -- Row Level Security: cada usuario solo ve y modifica sus propias filas.
 -- job_postings es de lectura pública porque es el catálogo compartido de vacantes.
@@ -133,6 +135,9 @@ create policy "usuarios crean sus propias aplicaciones"
   with check (auth.uid() = user_id);
 create policy "usuarios actualizan sus propias aplicaciones"
   on public.applications for update
+  using (auth.uid() = user_id);
+create policy "usuarios eliminan sus propias aplicaciones"
+  on public.applications for delete
   using (auth.uid() = user_id);
 
 create policy "usuarios ven su propio historial de generaciones"

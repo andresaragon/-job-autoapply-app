@@ -56,3 +56,19 @@ export interface GenerateContentResponse {
   carta_generada: string;
   provider?: "ollama" | "anthropic" | "gemini";
 }
+
+export interface ApplicationWithJob extends Application {
+  job_posting?: JobPosting | null;
+  resume?: Pick<Resume, "id" | "created_at"> | null;
+}
+
+export interface SyncJobsResult {
+  success: boolean;
+  totalSynced: number;
+  sources: {
+    remotive: number;
+    arbeitnow: number;
+  };
+  errors?: string[];
+}
+

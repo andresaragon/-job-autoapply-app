@@ -95,7 +95,7 @@ export default function Navbar() {
           </Link>
 
           {!isAuthPage && (
-            <nav className="hidden items-center gap-4 text-sm font-medium sm:flex">
+            <nav className="hidden items-center gap-5 text-sm font-medium sm:flex">
               <Link
                 href="/dashboard"
                 className={`transition-colors ${
@@ -105,6 +105,26 @@ export default function Navbar() {
                 }`}
               >
                 Generador
+              </Link>
+              <Link
+                href="/dashboard/jobs"
+                className={`transition-colors ${
+                  pathname === "/dashboard/jobs"
+                    ? "text-indigo-400"
+                    : "text-slate-400 hover:text-slate-200"
+                }`}
+              >
+                Vacantes
+              </Link>
+              <Link
+                href="/dashboard/applications"
+                className={`transition-colors ${
+                  pathname === "/dashboard/applications"
+                    ? "text-indigo-400"
+                    : "text-slate-400 hover:text-slate-200"
+                }`}
+              >
+                Mis Postulaciones
               </Link>
               <Link
                 href="/dashboard/resumes"

@@ -25,8 +25,14 @@ export default function LandingPage() {
           Ir al Generador
         </Link>
         <Link
-          href="/dashboard/resumes"
+          href="/dashboard/jobs"
           className="rounded-lg border border-slate-700 bg-slate-900 px-6 py-3 font-semibold text-slate-200 transition-all hover:bg-slate-800 hover:text-white"
+        >
+          Explorar Vacantes
+        </Link>
+        <Link
+          href="/dashboard/resumes"
+          className="rounded-lg border border-slate-800 bg-slate-950 px-6 py-3 font-semibold text-slate-400 transition-all hover:bg-slate-900 hover:text-white"
         >
           Subir mi CV Base
         </Link>
