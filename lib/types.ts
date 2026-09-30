@@ -13,6 +13,7 @@ export interface Resume {
   id: string;
   user_id: string;
   contenido_base: string; // texto plano estructurado del CV original
+  es_actual?: boolean;
   created_at: string;
 }
 

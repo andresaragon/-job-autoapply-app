@@ -6,6 +6,9 @@ y arquitectura de **IA Híbrida** (Ollama Local en GPU RTX 4060, Claude Sonnet 5
 ## Qué incluye
 
 - Estructura de **Next.js 16** (App Router, Turbopack) con TypeScript y Tailwind CSS.
+- **Autenticación y Sesiones:** Flujo completo de registro, inicio de sesión y callback con Supabase Auth y Middleware de protección de rutas privadas (`/dashboard`, `/resumes`).
+- **Gestión y Carga de CVs:** Interfaz en `/dashboard/resumes` para subir archivos (`.txt`, `.md`), previsualizar, editar y marcar un CV como principal (`es_actual`) con políticas RLS.
+- **Navbar reactiva:** Indicador de estado de sesión, correo del usuario, créditos disponibles en tiempo real y botón de cierre de sesión.
 - **Arquitectura de IA Tri-Híbrida:**
   - **Local On-Device ($0 / Offline):** Ollama con `qwen2.5:7b` corriendo en tu GPU local (RTX 4060).
   - **Nube Primaria:** Claude (`claude-sonnet-5-5`) para máxima calidad editorial.
@@ -13,13 +16,12 @@ y arquitectura de **IA Híbrida** (Ollama Local en GPU RTX 4060, Claude Sonnet 5
   - Selección configurable desde la interfaz o automático con tolerancia a fallos.
 - `supabase/schema.sql` y `supabase/migrations/20260929_audit_remediation.sql`: tablas `subscriptions`, `resumes`, `job_postings`, `applications` y `ai_generations`, con Row Level Security (RLS) activado, restricciones de saldo no negativo, soporte de auditoría multi-proveedor e índices de rendimiento.
 - `app/api/generate/route.ts`: endpoint resiliente con reserva atómica de créditos (`gt("creditos_disponibles", 0)`) y reembolso automático en fallo para evitar costes indebidos (*anti-TOCTOU*).
-- `app/dashboard/page.tsx`: panel funcional con selector de motor de IA (Local vs Nube), feedback de carga, manejo de errores y badge dinámico del proveedor utilizado.
+- `app/dashboard/page.tsx`: panel funcional con selector automático de CV principal, selector de motor de IA (Local vs Nube), feedback de carga, manejo de errores y badge dinámico del proveedor utilizado.
 
 ## Qué falta a propósito (fases siguientes del plan)
 
-- Pantallas de registro/login (Supabase Auth ya queda listo para conectarlas).
-- Subida de CV desde la interfaz (por ahora se inserta directamente en la tabla `resumes` desde el SQL Editor de Supabase para probar).
-- El agregador de vacantes (fase 2) y el worker de auto-apply (fases 3 y 4).
+- El agregador de vacantes (fase 2): scraping o ingesta de ofertas laborales.
+- El worker de auto-apply (fases 3 y 4): extensión o automatización de postulaciones directas.
 
 ## Cómo arrancarlo
 

@@ -8,8 +8,8 @@ export async function createClient() {
   const cookieStore = await cookies();
 
   return createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL || "",
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "",
+    process.env.NEXT_PUBLIC_SUPABASE_URL || "https://placeholder-project.supabase.co",
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "placeholder-anon-key",
     {
       cookies: {
         getAll() {
@@ -39,8 +39,8 @@ export async function createClient() {
 // por ejemplo para el worker de auto-apply o tareas administrativas que deben saltarse RLS.
 export function createServiceClient() {
   return createSupabaseClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL || "",
-    process.env.SUPABASE_SERVICE_ROLE_KEY || "",
+    process.env.NEXT_PUBLIC_SUPABASE_URL || "https://placeholder-project.supabase.co",
+    process.env.SUPABASE_SERVICE_ROLE_KEY || "placeholder-service-key",
     { auth: { persistSession: false } }
   );
 }
