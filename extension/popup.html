@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>JobAutoApply Assistant</title>
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+  <div class="app-container">
+    <!-- Header -->
+    <header class="header">
+      <div class="header-left">
+        <div class="logo-icon">⚡</div>
+        <div>
+          <h1 class="logo-text">JobAutoApply</h1>
+          <p class="tagline">ATS One-Click Auto-Fill</p>
+        </div>
+      </div>
+      <div id="ats-badge" class="badge badge-neutral">Detectando...</div>
+    </header>
+
+    <!-- Main Card -->
+    <main class="main-content">
+      <!-- Status Box -->
+      <div id="page-status" class="status-banner">
+        <span class="status-icon">ℹ️</span>
+        <span id="status-text" class="status-text">Inspeccionando página de empleo...</span>
+      </div>
+
+      <!-- Action Button -->
+      <div class="action-section">
+        <button id="btn-autofill" class="btn btn-primary">
+          <span class="btn-icon">⚡</span>
+          <span class="btn-label">Auto-Fill en 1-Clic</span>
+        </button>
+        <p class="hint">Rellena nombre, email, enlaces y datos de contacto respetando validaciones del portal.</p>
+      </div>
+
+      <!-- Result Card -->
+      <div id="result-box" class="result-box hidden">
+        <div class="result-header">
+          <span class="result-icon">✓</span>
+          <span id="result-title" class="result-title">Formulario Completado</span>
+        </div>
+        <p id="result-desc" class="result-desc">Se completaron 0 campos.</p>
+      </div>
+
+      <!-- Candidate Profile Preview -->
+      <section class="section">
+        <div class="section-header">
+          <h2 class="section-title">Perfil del Candidato</h2>
+          <button id="btn-toggle-edit" class="btn-text">Editar ✎</button>
+        </div>
+
+        <div id="profile-view" class="profile-preview">
+          <div class="profile-item">
+            <span class="item-label">Nombre:</span>
+            <span id="view-name" class="item-val">—</span>
+          </div>
+          <div class="profile-item">
+            <span class="item-label">Email:</span>
+            <span id="view-email" class="item-val">—</span>
+          </div>
+          <div class="profile-item">
+            <span class="item-label">Teléfono:</span>
+            <span id="view-phone" class="item-val">—</span>
+          </div>
+          <div class="profile-item">
+            <span class="item-label">LinkedIn:</span>
+            <span id="view-linkedin" class="item-val truncate">—</span>
+          </div>
+          <div class="profile-item">
+            <span class="item-label">GitHub:</span>
+            <span id="view-github" class="item-val truncate">—</span>
+          </div>
+          <div class="profile-item">
+            <span class="item-label">Portafolio:</span>
+            <span id="view-portfolio" class="item-val truncate">—</span>
+          </div>
+        </div>
+
+        <!-- Edit Form (Hidden by default) -->
+        <form id="profile-form" class="edit-form hidden">
+          <div class="form-group">
+            <label for="input-fullname">Nombre Completo</label>
+            <input type="text" id="input-fullname" placeholder="Santiago Aragón">
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label for="input-email">Email</label>
+              <input type="email" id="input-email" placeholder="correo@ejemplo.com">
+            </div>
+            <div class="form-group">
+              <label for="input-phone">Teléfono</label>
+              <input type="text" id="input-phone" placeholder="+57 300 123 4567">
+            </div>
+          </div>
+          <div class="form-group">
+            <label for="input-linkedin">LinkedIn URL</label>
+            <input type="url" id="input-linkedin" placeholder="https://linkedin.com/in/usuario">
+          </div>
+          <div class="form-group">
+            <label for="input-github">GitHub URL</label>
+            <input type="url" id="input-github" placeholder="https://github.com/usuario">
+          </div>
+          <div class="form-group">
+            <label for="input-portfolio">Portafolio / Web</label>
+            <input type="url" id="input-portfolio" placeholder="https://miportafolio.com">
+          </div>
+          <div class="form-group">
+            <label for="input-location">Ubicación</label>
+            <input type="text" id="input-location" placeholder="Bogotá, Colombia (Remoto)">
+          </div>
+          <div class="form-group">
+            <label for="input-coverletter">Carta de Presentación (Texto opcional)</label>
+            <textarea id="input-coverletter" rows="3" placeholder="Pega aquí tu carta de presentación si la vacante la solicita..."></textarea>
+          </div>
+          <div class="form-actions">
+            <button type="button" id="btn-cancel-edit" class="btn btn-secondary">Cancelar</button>
+            <button type="submit" id="btn-save-profile" class="btn btn-success">Guardar Perfil</button>
+          </div>
+        </form>
+      </section>
+
+      <!-- Sync with App -->
+      <section class="sync-section">
+        <button id="btn-sync-app" class="btn btn-outline">
+          <span>🔄 Sincronizar desde Web App (localhost:3000)</span>
+        </button>
+        <p id="sync-msg" class="sync-msg hidden"></p>
+      </section>
+    </main>
+
+    <!-- Footer -->
+    <footer class="footer">
+      <a href="http://localhost:3000/dashboard" target="_blank" class="footer-link">
+        Abrir Panel Web JobAutoApply ↗
+      </a>
+    </footer>
+  </div>
+
+  <script src="popup.js"></script>
+</body>
+</html>

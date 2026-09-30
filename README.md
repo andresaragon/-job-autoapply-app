@@ -31,6 +31,12 @@ y puente de webhooks para automatizaciones con n8n y Telegram.
   - Mapeo determinista de campos para Greenhouse, Lever, Ashby y formularios genéricos.
   - Generador de inyector JavaScript (one-click copy) que dispara eventos reactivos del DOM (`input`/`change`) y resalta campos completados en verde.
   - Script runner con Playwright (`worker/autoapply-playwright.mjs`) para ejecución automatizada headless/headed desde terminal o VPS.
+- **Extensión de Chrome Manifest V3 (`extension/`):**
+  - Extensión de navegador lista para cargar en Chrome o Edge (`chrome://extensions`).
+  - Detección automática de sistemas ATS (*Greenhouse, Lever, Ashby, Workday* o genéricos).
+  - Autollenado en 1-clic con disparo de eventos nativos de React/HTML5, resaltado visual esmeralda y toast de confirmación en la página.
+  - Almacenamiento local seguro (`chrome.storage.local`) con sincronización directa desde la Web App (`/api/profile`).
+  - Guía de instalación y uso en [`extension/README.md`](extension/README.md).
 - **Puente de Webhooks y Automatización n8n (`app/api/webhooks/n8n/route.ts` & `n8n/`):**
   - Endpoint protegido por token de webhook (`x-webhook-secret`).
   - Soporta acciones: `sync_jobs`, `get_pending`, `update_status` y `telegram_digest` (resumen formateado en Markdown para bots de Telegram con enlaces directos para postular con IA).

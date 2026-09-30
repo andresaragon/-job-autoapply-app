@@ -22,7 +22,8 @@ export async function GET() {
       return NextResponse.json({ error: error.message }, { status: 500 });
     }
 
-    return NextResponse.json({ profile: data || null });
+    const profileData = data ? { ...data, email: user.email } : { email: user.email };
+    return NextResponse.json({ profile: profileData });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Error al obtener perfil";
     return NextResponse.json({ error: message }, { status: 500 });
