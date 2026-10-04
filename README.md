@@ -1,5 +1,7 @@
 # Job AutoApply — Fases 0, 1, 2 y 3
 
+[![CI](https://github.com/andresaragon/-job-autoapply-app/actions/workflows/ci.yml/badge.svg)](https://github.com/andresaragon/-job-autoapply-app/actions/workflows/ci.yml)
+
 Plataforma integral Next.js con Supabase para datos/autenticación, agregador de vacantes públicas (Remotive & Arbeitnow),
 arquitectura de **IA Híbrida** (Ollama Local en GPU RTX 4060, Claude Sonnet 5.5 y Google Gemini), módulo de auto-llenado ATS (Greenhouse, Lever, Ashby)
 y puente de webhooks para automatizaciones con n8n y Telegram.
@@ -48,12 +50,12 @@ y puente de webhooks para automatizaciones con n8n y Telegram.
   - **Nube Primaria:** Claude (`claude-sonnet-5-5`) para máxima calidad editorial.
   - **Nube Respaldo (Fallback):** Google Gemini (`gemini-2.5-flash`) con cuota gratuita.
 - `supabase/schema.sql` y migraciones en `supabase/migrations/`: tablas `subscriptions`, `profiles`, `resumes`, `job_postings`, `applications` y `ai_generations`, con Row Level Security (RLS) activado, restricciones de saldo no negativo, soporte de auditoría multi-proveedor e índices de rendimiento.
-- `app/api/generate/route.ts`: endpoint resiliente con reserva atómica de créditos (`gt("creditos_disponibles", 0)`) y reembolso automático en fallo para evitar costes indebidos (*anti-TOCTOU*).
+- `app/api/generate/route.ts`: endpoint resiliente con reserva atómica de créditos (RPC SQL `reserve_credit`) y reembolso relativo automático en cualquier fallo (*anti-TOCTOU*, ver [Decisiones de diseño](#decisiones-de-diseño)).
 - `app/dashboard/page.tsx`: panel funcional con precarga de vacantes desde el catálogo, selector automático de CV principal, selector de motor de IA, feedback de carga y guardado directo a *Mis Postulaciones*.
 
 ## Cómo arrancarlo
 
-1. Crea un proyecto en [supabase.com](https://supabase.com) y, en el SQL Editor, ejecuta el contenido de `supabase/schema.sql` (o las migraciones delta en `supabase/migrations/` si ya tenías tablas de fases anteriores: `20260929_audit_remediation.sql`, `20260929_job_aggregator.sql` y `20260929_user_profiles.sql`).
+1. Crea un proyecto en [supabase.com](https://supabase.com) y, en el SQL Editor, ejecuta el contenido de `supabase/schema.sql` (o las migraciones delta en `supabase/migrations/` si ya tenías tablas de fases anteriores, en este orden: `20260929_audit_remediation.sql`, `20260929_job_aggregator.sql`, `20260929_user_profiles.sql` y `20261002_credit_functions.sql`).
 2. Si vas a usar **Ollama Local**: asegúrate de que Ollama esté corriendo y con el modelo descargado:
    ```bash
    ollama pull qwen2.5:7b
@@ -70,6 +72,78 @@ y puente de webhooks para automatizaciones con n8n y Telegram.
    - Inserta una fila de prueba en `resumes` desde Supabase con un `user_id` válido y el texto de tu CV.
    - Pega ese `id` en el panel de `/dashboard` junto con una oferta laboral, selecciona tu motor de IA y haz clic en **Generar**.
 
+## Arquitectura
+
+```mermaid
+flowchart LR
+    U["Usuario (navegador)"] --> UI["Next.js App Router<br/>/dashboard · /login"]
+    EXT["Extensión Chrome MV3<br/>(autollenado asistido)"] -->|GET /api/profile| API
+    UI --> MW["Middleware<br/>(sesión y rutas privadas)"]
+    UI --> API["Route Handlers /api/*<br/>generate · jobs · applications<br/>profile · worker/autofill · webhooks/n8n"]
+
+    API -->|"sesión + RLS"| SB[("Supabase<br/>Auth + Postgres")]
+    API -->|"service_role<br/>(solo servidor)"| SB
+    API -->|"rpc reserve_credit /<br/>refund_credit"| SB
+
+    API --> ROUTER{"Router de IA<br/>auto | ollama | anthropic | gemini"}
+    ROUTER -->|1| OLL["Ollama local<br/>(GPU, $0)"]
+    ROUTER -->|2| ANT["Claude Sonnet"]
+    ROUTER -->|3 respaldo| GEM["Gemini Flash"]
+
+    API --> AGG["Agregador de vacantes<br/>(lib/jobs/aggregator.ts)"]
+    AGG -->|fetch| REM["Remotive"]
+    AGG -->|fetch| ARB["Arbeitnow"]
+
+    N8N["n8n + Telegram<br/>(cron diario)"] -->|"x-webhook-secret"| API
+    WRK["Worker Playwright"] -->|"x-worker-secret"| API
+```
+
+**Módulos puros y deterministas** (los más probados): `lib/ats/matcher.ts` (score ATS y keywords),
+`lib/worker/ats/filler.ts` (mapeo de campos por ATS) y `lib/jobs/aggregator.ts` (normalización de feeds y
+detección de ATS). Todo el acceso a datos pasa por Supabase con RLS; el cliente `service_role` solo se usa
+en rutas de servidor.
+
+## Decisiones de diseño
+
+### IA híbrida (local → nube → respaldo)
+Un solo prompt y un formato de salida estructurado (`### CV_ADAPTADO` / `### CARTA_PRESENTACION`), pero el
+proveedor es intercambiable. En modo `auto` se intenta **Ollama** en la GPU local (coste $0 y los datos del CV
+no salen de la máquina), después **Claude** (calidad editorial) y por último **Gemini** (cuota gratuita como
+red de seguridad). Cada intento falla de forma aislada y los errores por proveedor se devuelven en `details`.
+Cada generación queda auditada en `ai_generations` (proveedor y tokens). En producción (Vercel) Ollama no es
+alcanzable, por eso se recomienda `DEFAULT_AI_PROVIDER=anthropic|gemini`.
+
+### Créditos anti-TOCTOU
+Cobrar "leer saldo → comprobar → escribir saldo" deja una ventana donde dos solicitudes simultáneas ven el
+mismo saldo y ambas pasan. En su lugar:
+
+- **Reserva** antes de llamar a la IA con una función SQL (`reserve_credit`): un único
+  `UPDATE … WHERE creditos_disponibles > 0 RETURNING`, atómico en Postgres.
+- **Reembolso relativo** (`refund_credit`, `+1`) si la vacante no existe, ningún proveedor responde, el modelo
+  devuelve un formato inválido o hay una excepción; nunca se restaura un saldo "leído antes".
+- Defensa en profundidad: `CHECK (creditos_disponibles >= 0)` y funciones ejecutables solo por `service_role`.
+- Cubierto por tests de concurrencia (p. ej. 5 solicitudes simultáneas con 3 créditos → exactamente 3 cobros).
+
+### Autollenado asistido en lugar de envío automático
+La app **rellena** los formularios de Greenhouse, Lever, Ashby o genéricos (selectores deterministas, eventos
+`input`/`change`, resaltado visual) pero **no pulsa "Enviar"**: la persona revisa y envía. Es deliberado:
+los términos de servicio de muchos portales de empleo y ATS prohíben el envío automatizado/masivo, los
+formularios incluyen preguntas y consentimientos legales que deben contestarse con criterio humano, y una
+postulación enviada con datos inventados o mal mapeados es difícil de retirar. El modo asistido conserva el
+ahorro de tiempo sin ese riesgo. Además, el prompt prohíbe a la IA inventar experiencia no presente en el CV.
+
+## Tests y CI
+
+```bash
+npm test          # Vitest, sin red ni keys reales
+npm run lint && npm run typecheck
+```
+
+Los tests simulan Supabase (fake en memoria, `tests/helpers/fakeSupabase.ts`), `fetch` (Remotive/Arbeitnow) y los
+tres proveedores de IA. GitHub Actions (`.github/workflows/ci.yml`) ejecuta `npm ci`, lint, typecheck y tests en
+cada push y PR.
+
 ## Despliegue
 
-El proyecto está listo para desplegarse en Vercel: conecta el repositorio, agrega las variables de entorno de Supabase y de tu proveedor nube (Anthropic / Gemini) en la configuración del proyecto de Vercel, y despliega.
+Guía paso a paso (Vercel + Supabase, migraciones en orden, variables de entorno y URL de callback de auth) en
+[`docs/DEPLOY.md`](docs/DEPLOY.md).

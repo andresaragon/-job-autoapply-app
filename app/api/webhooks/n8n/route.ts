@@ -6,14 +6,14 @@ function verifySecret(req: NextRequest): boolean {
   const configuredSecret = process.env.N8N_WEBHOOK_SECRET || process.env.WEBHOOK_SECRET;
 
   // Si no está configurado en entorno local de desarrollo, permitir con fallback
-  if (!configuredSecret && process.env.NODE_ENV !== "production") {
-    return true;
+  if (!configuredSecret) {
+    return process.env.NODE_ENV !== "production";
   }
 
   const headerSecret = req.headers.get("x-webhook-secret");
   const querySecret = new URL(req.url).searchParams.get("secret");
 
-  return (headerSecret === configuredSecret) || (querySecret === configuredSecret);
+  return headerSecret === configuredSecret || querySecret === configuredSecret;
 }
 
 export async function GET(req: NextRequest) {
