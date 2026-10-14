@@ -34,10 +34,105 @@ document.addEventListener("DOMContentLoaded", async () => {
   const inputGithub = document.getElementById("input-github");
   const inputPortfolio = document.getElementById("input-portfolio");
   const inputLocation = document.getElementById("input-location");
+  const inputSalary = document.getElementById("input-salary");
   const inputCoverLetter = document.getElementById("input-coverletter");
 
   let currentProfile = null;
   let activeTab = null;
+
+  // Tracker (empleo.vacantes vía Edge Function empleo-autofill)
+  const vacanteSelect = document.getElementById("vacante-select");
+  const vacanteInfo = document.getElementById("vacante-info");
+  const btnMarkApplied = document.getElementById("btn-mark-applied");
+  const btnReloadTracker = document.getElementById("btn-reload-tracker");
+  const btnSaveTracker = document.getElementById("btn-save-tracker");
+  const inputTrackerUrl = document.getElementById("input-tracker-url");
+  const inputTrackerToken = document.getElementById("input-tracker-token");
+  let trackerConfig = { url: "", token: "" };
+  let vacantes = [];
+
+  function selectedVacante() {
+    // El id llega como texto: postgres.js devuelve los bigint como string.
+    return vacantes.find((v) => String(v.id) === vacanteSelect.value) || null;
+  }
+
+  async function trackerFetch(method, body) {
+    if (!trackerConfig.url || !trackerConfig.token) throw new Error("Configura la conexión con el tracker.");
+    const res = await fetch(trackerConfig.url, {
+      method,
+      headers: { "Content-Type": "application/json", "x-autofill-token": trackerConfig.token },
+      body: body ? JSON.stringify(body) : undefined
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(data.error || `HTTP ${res.status}`);
+    return data;
+  }
+
+  function renderVacanteInfo() {
+    const v = selectedVacante();
+    btnMarkApplied.classList.toggle("hidden", !v);
+    if (!v) {
+      vacanteInfo.textContent = vacantes.length ? "Elige la vacante para rellenar también sus preguntas." : vacanteInfo.textContent;
+      return;
+    }
+    const cv = v.cv_sugerido ? `Sube el CV ${v.cv_sugerido}.` : "";
+    const rel = v.relacion === "contratista" ? " Contratista (USD, sin prestaciones)." : "";
+    vacanteInfo.textContent = `${v.titulo}. ${cv}${rel}`;
+  }
+
+  async function loadTracker() {
+    const stored = await chrome.storage.local.get("trackerConfig");
+    trackerConfig = stored.trackerConfig || trackerConfig;
+    inputTrackerUrl.value = trackerConfig.url || "";
+    inputTrackerToken.value = trackerConfig.token || "";
+    if (!trackerConfig.url || !trackerConfig.token) {
+      vacanteInfo.textContent = "Sin conexión con el tracker: abre \"Conexión con el tracker\".";
+      return;
+    }
+    vacanteInfo.textContent = "Cargando propuestas...";
+    try {
+      const data = await trackerFetch("GET");
+      vacantes = data.vacantes || [];
+      vacanteSelect.length = 1;
+      for (const v of vacantes) {
+        const opt = document.createElement("option");
+        opt.value = String(v.id);
+        opt.textContent = `${v.empresa} — ${v.titulo}`;
+        vacanteSelect.appendChild(opt);
+      }
+      const match = activeTab?.url ? window.JobAutoApplyMatcher.matchVacante(activeTab.url, vacantes) : null;
+      if (match) vacanteSelect.value = String(match.vacante.id);
+      vacanteInfo.textContent = vacantes.length ? "" : "No hay vacantes en estado 'propuesta'.";
+      renderVacanteInfo();
+    } catch (err) {
+      vacanteInfo.textContent = `Tracker: ${err.message}`;
+    }
+  }
+
+  vacanteSelect.addEventListener("change", renderVacanteInfo);
+  btnReloadTracker.addEventListener("click", loadTracker);
+
+  btnSaveTracker.addEventListener("click", async () => {
+    trackerConfig = { url: inputTrackerUrl.value.trim(), token: inputTrackerToken.value.trim() };
+    await chrome.storage.local.set({ trackerConfig });
+    await loadTracker();
+  });
+
+  btnMarkApplied.addEventListener("click", async () => {
+    const v = selectedVacante();
+    if (!v) return;
+    if (!confirm(`¿Confirmas que ya enviaste la postulación a ${v.empresa}?`)) return;
+    btnMarkApplied.disabled = true;
+    try {
+      await trackerFetch("POST", { id: v.id });
+      vacanteInfo.textContent = `✓ ${v.empresa} marcada como postulada.`;
+      await loadTracker();
+    } catch (err) {
+      vacanteInfo.textContent = `No se pudo marcar: ${err.message}`;
+    } finally {
+      btnMarkApplied.disabled = false;
+    }
+  });
 
   // 1. Cargar perfil desde storage local
   async function loadProfile() {
@@ -47,11 +142,11 @@ document.addEventListener("DOMContentLoaded", async () => {
       firstName: "Santiago",
       lastName: "Aragón",
       email: "santiagoaragon.sistemas@gmail.com",
-      phone: "+57 300 000 0000",
-      linkedin: "https://linkedin.com/in/santiagoaragon",
+      phone: "",
+      linkedin: "https://linkedin.com/in/santiagoaragonguzman",
       github: "https://github.com/andresaragon",
-      portfolio: "https://santiagoaragon.dev",
-      location: "Bogotá, Colombia (Remoto)",
+      portfolio: "",
+      location: "Cali, Colombia",
       coverLetter: ""
     };
 
@@ -75,6 +170,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     inputGithub.value = currentProfile.github || "";
     inputPortfolio.value = currentProfile.portfolio || "";
     inputLocation.value = currentProfile.location || "";
+    inputSalary.value = currentProfile.salaryExpectation || "";
     inputCoverLetter.value = currentProfile.coverLetter || "";
   }
 
@@ -101,7 +197,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       try {
         await chrome.scripting.executeScript({
           target: { tabId: tab.id },
-          files: ["content.js"]
+          files: ["matcher.js", "content.js"]
         });
       } catch (err) {
         console.warn("Scripting execute error (posiblemente ya inyectado):", err);
@@ -159,12 +255,13 @@ document.addEventListener("DOMContentLoaded", async () => {
       // Re-asegurar que el content script esté listo
       await chrome.scripting.executeScript({
         target: { tabId: activeTab.id },
-        files: ["content.js"]
+        files: ["matcher.js", "content.js"]
       });
 
       const response = await chrome.tabs.sendMessage(activeTab.id, {
         action: "auto_fill",
-        profile: currentProfile
+        profile: currentProfile,
+        vacante: selectedVacante()
       });
 
       resultBox.classList.remove("hidden");
@@ -174,6 +271,21 @@ document.addEventListener("DOMContentLoaded", async () => {
         const count = response.filledCount || 0;
         const fieldsStr = (response.filledFields || []).join(", ");
         resultDesc.textContent = `${count} campo(s) completados [${fieldsStr || "Datos de contacto"}]. Revisa y pulsa Enviar.`;
+        const a = response.answers;
+        const toReview = [
+          ...(a ? [...a.pending.map((q) => `Falta el dato: ${q}`), ...a.review, ...a.unmatched.map((q) => `Sin respuesta: ${q}`)] : []),
+          ...(response.cleared || []).map((q) => `No quedó guardado (elígelo de la lista del portal): ${q}`)
+        ];
+        if (toReview.length) {
+          const ul = document.createElement("ul");
+          ul.className = "review-list";
+          for (const q of toReview) {
+            const li = document.createElement("li");
+            li.textContent = q;
+            ul.appendChild(li);
+          }
+          resultDesc.appendChild(ul);
+        }
       } else {
         resultTitle.textContent = "Completado con advertencia";
         resultDesc.textContent = response?.error || "Se escanearon los campos. Verifica si el portal requiere campos adicionales.";
@@ -215,6 +327,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       github: inputGithub.value.trim(),
       portfolio: inputPortfolio.value.trim(),
       location: inputLocation.value.trim(),
+      salaryExpectation: inputSalary.value.trim(),
       coverLetter: inputCoverLetter.value.trim(),
       appUrl: currentProfile?.appUrl || "http://localhost:3000"
     };
@@ -282,4 +395,5 @@ document.addEventListener("DOMContentLoaded", async () => {
   // Inicializar
   await loadProfile();
   await inspectActiveTab();
+  await loadTracker();
 });

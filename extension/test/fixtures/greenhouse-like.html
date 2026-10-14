@@ -1,0 +1,33 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>Fixture tipo Greenhouse</title></head>
+<body>
+<form id="application_form">
+  <div class="field"><label for="first_name">First Name*</label><input id="first_name" name="first_name" required></div>
+  <div class="field"><label for="last_name">Last Name*</label><input id="last_name" name="last_name" required></div>
+  <div class="field"><label for="email">Email*</label><input id="email" type="email" required></div>
+  <div class="field"><label for="phone">Phone</label><input id="phone" type="tel"></div>
+  <div class="field"><label id="q1-label" for="q1">LinkedIn Profile</label><input id="q1" aria-labelledby="q1-label"></div>
+  <div class="field"><label id="q2-label" for="q2">Where are you based?*</label><textarea id="q2" required></textarea></div>
+  <div class="field"><label for="q3">Are you already legally authorized to work in the United States?*</label>
+    <select id="q3" required><option value="">Select...</option><option>Yes</option><option>No</option></select></div>
+  <div class="field"><label for="q4">Will you now, or in the future, require sponsorship for employment visa status (e.g. H-1B visa status)?*</label>
+    <select id="q4" required><option value="">Select...</option><option>Yes</option><option>No</option></select></div>
+  <div class="field"><label for="q5">How many years of experience do you have working with Python?*</label><input id="q5" required></div>
+  <div class="field"><label for="q6">How did you hear about us?*</label><input id="q6" required></div>
+  <div class="field"><label for="q7">What is your salary expectation?*</label><input id="q7" required></div>
+  <div class="field"><label for="q8">Do you have a valid driver's license?*</label><input id="q8" required></div>
+  <div class="field"><label for="q9">Why are you interested in this role? (max 200)</label><textarea id="q9" maxlength="200"></textarea></div>
+  <fieldset><legend>Are you comfortable working as an independent contractor?*</legend>
+    <label><input type="radio" name="contractor" value="y"> Yes</label>
+    <label><input type="radio" name="contractor" value="n"> No</label>
+  </fieldset>
+  <div class="field"><label for="cover_letter_text">Cover Letter</label><textarea id="cover_letter_text"></textarea></div>
+  <div class="field"><label for="resume">Resume/CV*</label><input id="resume" type="file" required></div>
+  <div class="field"><label for="location">Current location</label><input id="location" name="location"></div>
+</form>
+<script>
+  // Como el autocompletado de ubicación de Lever: si no se elige una opción de su lista, vacía el campo.
+  const loc = document.getElementById("location");
+  loc.addEventListener("blur", () => setTimeout(() => { if (!loc.dataset.selected) loc.value = ""; }, 200));
+</script>
+</body></html>

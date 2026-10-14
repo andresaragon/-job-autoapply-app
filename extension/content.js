@@ -114,9 +114,16 @@
     return null;
   }
 
-  function runAutoFill(profile) {
+  // Campos rellenados en esta corrida, para comprobar después que el portal no los vació.
+  let filledEls = [];
+
+  function runAutoFill(profile, vacante) {
     if (!profile) {
       return { success: false, error: "Perfil de candidato no provisto" };
+    }
+    filledEls = [];
+    if (vacante && vacante.carta) {
+      profile = { ...profile, coverLetter: vacante.carta };
     }
 
     const ats = detectAts();
@@ -274,22 +281,240 @@
         if (success) {
           filledCount++;
           filledFields.push(def.name);
+          filledEls.push({ el: targetEl, label: def.name });
         }
       }
     }
 
-    // Mostrar toast visual en la página
-    showFloatingToast(filledCount, ats);
+    // Preguntas del formulario con las respuestas del tracker
+    let answers = null;
+    if (vacante && window.JobAutoApplyMatcher) {
+      answers = fillAnswers(vacante.respuestas_sugeridas || "", profile);
+      filledCount += answers.filled.length;
+    }
 
     return {
       success: true,
       ats,
       filledCount,
-      filledFields
+      filledFields,
+      answers
     };
   }
 
-  function showFloatingToast(count, ats) {
+  // ---------------------------------------------------------------------------
+  // Respuestas del tracker → preguntas del formulario
+  // ---------------------------------------------------------------------------
+
+  const REVIEW_STYLE = { borderColor: "#f59e0b", boxShadow: "0 0 0 2px rgba(245, 158, 11, 0.35)" };
+
+  function clean(text) {
+    return String(text || "").replace(/\s+/g, " ").replace(/\*/g, "").trim();
+  }
+
+  function isVisible(el) {
+    return !!(el && (el.offsetParent !== null || el.getClientRects().length));
+  }
+
+  function questionText(el) {
+    if (el.id) {
+      try {
+        const l = document.querySelector(`label[for="${CSS.escape(el.id)}"]`);
+        if (l && clean(l.textContent)) return clean(l.textContent);
+      } catch {
+        // id con caracteres raros: seguir con otras estrategias
+      }
+    }
+    const labelledBy = el.getAttribute("aria-labelledby");
+    if (labelledBy) {
+      const t = labelledBy.split(/\s+/).map((id) => document.getElementById(id)?.textContent || "").join(" ");
+      if (clean(t)) return clean(t);
+    }
+    const aria = el.getAttribute("aria-label");
+    if (aria) return clean(aria);
+    const wrap = el.closest("label");
+    if (wrap && clean(wrap.textContent)) return clean(wrap.textContent);
+    const fieldset = el.closest("fieldset");
+    if (fieldset) {
+      const legend = fieldset.querySelector("legend");
+      if (legend && clean(legend.textContent)) return clean(legend.textContent);
+    }
+    let node = el.parentElement;
+    for (let i = 0; i < 4 && node; i++) {
+      const cand = node.querySelector("label, legend, [class*='label'], [class*='question'], [class*='title']");
+      if (cand && !cand.contains(el) && clean(cand.textContent)) return clean(cand.textContent);
+      node = node.parentElement;
+    }
+    return clean(el.placeholder || el.name || "");
+  }
+
+  function markForReview(el) {
+    el.style.transition = "all 0.3s ease";
+    el.style.borderColor = REVIEW_STYLE.borderColor;
+    el.style.boxShadow = REVIEW_STYLE.boxShadow;
+  }
+
+  function radioGroups() {
+    const groups = new Map();
+    for (const r of document.querySelectorAll("input[type='radio']")) {
+      if (!isVisible(r) || !r.name) continue;
+      if (!groups.has(r.name)) groups.set(r.name, []);
+      groups.get(r.name).push(r);
+    }
+    return groups;
+  }
+
+  function radioGroupQuestion(radios) {
+    const fieldset = radios[0].closest("fieldset");
+    if (fieldset) {
+      const legend = fieldset.querySelector("legend");
+      if (legend && clean(legend.textContent)) return clean(legend.textContent);
+    }
+    // Subir hasta el contenedor que agrupa todas las opciones y buscar su etiqueta.
+    let node = radios[0].parentElement;
+    for (let i = 0; i < 5 && node; i++) {
+      if (radios.every((r) => node.contains(r))) {
+        const cand = node.querySelector("label:not(:has(input)), legend, [class*='label'], [class*='question']");
+        if (cand && !radios.some((r) => cand.contains(r)) && clean(cand.textContent)) return clean(cand.textContent);
+      }
+      node = node.parentElement;
+    }
+    return "";
+  }
+
+  // Obligatorio si algún radio lo declara o si la etiqueta del grupo termina en "*".
+  function radioGroupRequired(radios) {
+    if (radios.some((r) => r.required || r.getAttribute("aria-required") === "true")) return true;
+    if (radios[0].closest("[aria-required='true'], [data-required='true']")) return true;
+    const legend = radios[0].closest("fieldset")?.querySelector("legend");
+    return !!legend && /\*\s*$/.test(legend.textContent.trim());
+  }
+
+  function markRadioGroup(radios) {
+    const fieldset = radios[0].closest("fieldset");
+    if (fieldset) markForReview(fieldset);
+    else radios.forEach((r) => markForReview(r.closest("label") || r));
+  }
+
+  // Algunos portales (p. ej. el autocompletado de ubicación de Lever) vacían el campo si no
+  // se elige una opción de su lista: lo que quedó vacío pasa de verde a naranja.
+  function verifyFilled(result) {
+    result.cleared = [];
+    for (const { el, label } of filledEls) {
+      if (clean(el.value) !== "") continue;
+      markForReview(el);
+      el.style.backgroundColor = "";
+      result.filledCount--;
+      result.filledFields = result.filledFields.filter((f) => f !== label);
+      if (result.answers) result.answers.filled = result.answers.filled.filter((q) => q !== label);
+      result.cleared.push(label);
+    }
+    return result;
+  }
+
+  function radioOptionText(radio) {
+    if (radio.id) {
+      const l = document.querySelector(`label[for="${CSS.escape(radio.id)}"]`);
+      if (l) return clean(l.textContent);
+    }
+    const wrap = radio.closest("label");
+    return clean(wrap ? wrap.textContent : radio.value);
+  }
+
+  function fillAnswers(raw, profile) {
+    const M = window.JobAutoApplyMatcher;
+    const extras = [["What is your salary expectation?", profile && profile.salaryExpectation]];
+    const items = M.withDefaults(M.parseAnswers(raw), extras);
+    const result = { filled: [], pending: [], review: [], unmatched: [] };
+
+    const fields = Array.from(document.querySelectorAll("input, textarea, select")).filter((el) => {
+      if (!isVisible(el) || el.disabled || el.readOnly) return false;
+      const type = (el.getAttribute("type") || "text").toLowerCase();
+      return !["hidden", "submit", "button", "checkbox", "radio", "file", "search", "password"].includes(type);
+    });
+
+    for (const el of fields) {
+      const question = questionText(el);
+      const isSelect = el.tagName.toLowerCase() === "select";
+      const alreadyFilled = isSelect ? el.selectedIndex > 0 : clean(el.value) !== "";
+      if (!question || alreadyFilled) continue;
+
+      const match = M.matchQuestion(question, items);
+      if (!match) {
+        if (el.required || el.getAttribute("aria-required") === "true") {
+          markForReview(el);
+          result.unmatched.push(question);
+        }
+        continue;
+      }
+      const { item } = match;
+      if (item.pending) {
+        markForReview(el);
+        result.pending.push(question);
+        continue;
+      }
+
+      if (isSelect) {
+        const idx = M.pickOption(Array.from(el.options).map((o) => o.textContent), item.answer);
+        if (idx < 0) {
+          markForReview(el);
+          result.review.push(question);
+          continue;
+        }
+        el.selectedIndex = idx;
+        el.dispatchEvent(new Event("input", { bubbles: true }));
+        el.dispatchEvent(new Event("change", { bubbles: true }));
+        el.style.borderColor = "#10b981";
+        result.filled.push(question);
+        continue;
+      }
+
+      const max = Number(el.getAttribute("maxlength")) || (item.limit && item.limit.max) || 0;
+      if (max > 0 && item.answer.length > max) {
+        // Nunca recortar: una respuesta cortada a la mitad es peor que un campo vacío.
+        markForReview(el);
+        result.review.push(`${question} (respuesta de ${item.answer.length} > ${max} caracteres)`);
+        continue;
+      }
+      if (setNativeValue(el, item.answer)) {
+        result.filled.push(question);
+        filledEls.push({ el, label: question });
+      }
+    }
+
+    for (const radios of radioGroups().values()) {
+      if (radios.some((r) => r.checked)) continue;
+      const question = radioGroupQuestion(radios);
+      const match = question && M.matchQuestion(question, items);
+      if (!match) {
+        if (radioGroupRequired(radios)) {
+          markRadioGroup(radios);
+          result.unmatched.push(question || radios[0].name);
+        }
+        continue;
+      }
+      if (match.item.pending) {
+        markRadioGroup(radios);
+        result.pending.push(question);
+        continue;
+      }
+      const idx = M.pickOption(radios.map(radioOptionText), match.item.answer);
+      if (idx < 0) {
+        markRadioGroup(radios);
+        result.review.push(question);
+        continue;
+      }
+      radios[idx].click();
+      result.filled.push(question);
+    }
+
+    return result;
+  }
+
+  function showFloatingToast(count, ats, answers, cleared) {
+    const toReview =
+      (answers ? answers.pending.length + answers.review.length + answers.unmatched.length : 0) +
+      (cleared ? cleared.length : 0);
     const existing = document.getElementById("job-autoapply-toast");
     if (existing) existing.remove();
 
@@ -332,6 +557,7 @@
       <div>
         <div style="font-weight: 600; color: #ffffff;">JobAutoApply: ${count} campos completados</div>
         <div style="font-size: 11px; color: #94a3b8;">Portal detectado: <b style="color: #6ee7b7; text-transform: uppercase;">${ats}</b></div>
+        ${toReview ? `<div style="font-size: 11px; color: #fbbf24;">${toReview} campo(s) en naranja para revisar a mano</div>` : ""}
       </div>
     `;
 
@@ -356,9 +582,18 @@
     }
 
     if (request.action === "auto_fill") {
-      const result = runAutoFill(request.profile);
-      sendResponse(result);
-      return false;
+      const result = runAutoFill(request.profile, request.vacante || null);
+      if (!result.success) {
+        sendResponse(result);
+        return false;
+      }
+      // Dar tiempo a que el portal reaccione (autocompletados que vacían el campo) antes de reportar.
+      setTimeout(() => {
+        verifyFilled(result);
+        showFloatingToast(result.filledCount, result.ats, result.answers, result.cleared);
+        sendResponse(result);
+      }, 800);
+      return true;
     }
 
     return false;
