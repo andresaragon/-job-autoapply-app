@@ -51,8 +51,8 @@ document.addEventListener("DOMContentLoaded", async () => {
   let vacantes = [];
 
   function selectedVacante() {
-    const id = Number(vacanteSelect.value);
-    return vacantes.find((v) => v.id === id) || null;
+    // El id llega como texto: postgres.js devuelve los bigint como string.
+    return vacantes.find((v) => String(v.id) === vacanteSelect.value) || null;
   }
 
   async function trackerFetch(method, body) {
