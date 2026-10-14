@@ -29,6 +29,7 @@ const PROFILE = {
 const VACANTE = {
   id: "999",
   empresa: "Fixture Inc",
+  fuente: "linkedin",
   carta: "Hello Fixture team,\n\nThis is the cover letter.",
   respuestas_sugeridas: [
     "- Location/authorization: Based in Colombia; available as contractor for remote work from Colombia.",
@@ -68,9 +69,9 @@ try {
     };
     const out = {};
     for (const el of document.querySelectorAll("input, textarea, select, fieldset")) {
-      if (!el.id && el.tagName !== "FIELDSET") continue;
+      if (!el.id) continue;
       const value = el.tagName === "SELECT" ? el.options[el.selectedIndex].text : el.value;
-      out[el.id || "contractor"] = { value, color: color(el) };
+      out[el.id] = { value, color: color(el) };
     }
     out.contractor.value = document.querySelector("input[name=contractor]:checked")?.value || "";
     return out;
@@ -95,14 +96,16 @@ try {
   ok("q4", "No"); // visa
   ok("q7", PROFILE.salaryExpectation); // el tracker trae [completar]: se usa el del perfil
   ok("cover_letter_text", VACANTE.carta);
-  review("q6"); // How did you hear about us? — obligatoria sin respuesta
+  ok("q6", "LinkedIn"); // How did you hear about us? — sale de la fuente del tracker
   review("q8"); // driver's license — obligatoria sin respuesta
-  review("contractor"); // radio obligatorio sin respuesta
+  assert.equal(fields.contractor.value, "y"); // acepta contratista: Yes por defecto
+  review("relocate"); // radio obligatorio sin respuesta: nunca se adivina
   review("location"); // el portal vació el campo: no puede quedar verde
   assert.equal(fields.location.value, "");
   assert.equal(fields.resume.value, ""); // nunca sube archivos
   assert.ok(result.cleared.includes("Location"), "Location debería reportarse como no guardado");
-  assert.ok(result.answers.unmatched.some((q) => q.includes("independent contractor")));
+  assert.ok(result.answers.filled.some((q) => q.includes("independent contractor")));
+  assert.ok(result.answers.unmatched.some((q) => q.includes("relocate")));
   assert.ok(!result.filledFields.includes("Location"));
 
   console.log(`OK: ${result.filledCount} campos completados; a revisar: ${[

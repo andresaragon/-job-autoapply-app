@@ -17,9 +17,13 @@
   <div class="field"><label for="q7">What is your salary expectation?*</label><input id="q7" required></div>
   <div class="field"><label for="q8">Do you have a valid driver's license?*</label><input id="q8" required></div>
   <div class="field"><label for="q9">Why are you interested in this role? (max 200)</label><textarea id="q9" maxlength="200"></textarea></div>
-  <fieldset><legend>Are you comfortable working as an independent contractor?*</legend>
+  <fieldset id="contractor"><legend>Are you comfortable working as an independent contractor?*</legend>
     <label><input type="radio" name="contractor" value="y"> Yes</label>
     <label><input type="radio" name="contractor" value="n"> No</label>
+  </fieldset>
+  <fieldset id="relocate"><legend>Are you willing to relocate to Austin, TX?*</legend>
+    <label><input type="radio" name="relocate" value="y"> Yes</label>
+    <label><input type="radio" name="relocate" value="n"> No</label>
   </fieldset>
   <div class="field"><label for="cover_letter_text">Cover Letter</label><textarea id="cover_letter_text"></textarea></div>
   <div class="field"><label for="resume">Resume/CV*</label><input id="resume" type="file" required></div>

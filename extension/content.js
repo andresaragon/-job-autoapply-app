@@ -289,7 +289,7 @@
     // Preguntas del formulario con las respuestas del tracker
     let answers = null;
     if (vacante && window.JobAutoApplyMatcher) {
-      answers = fillAnswers(vacante.respuestas_sugeridas || "", profile);
+      answers = fillAnswers(vacante.respuestas_sugeridas || "", profile, vacante);
       filledCount += answers.filled.length;
     }
 
@@ -421,9 +421,12 @@
     return clean(wrap ? wrap.textContent : radio.value);
   }
 
-  function fillAnswers(raw, profile) {
+  function fillAnswers(raw, profile, vacante) {
     const M = window.JobAutoApplyMatcher;
-    const extras = [["What is your salary expectation?", profile && profile.salaryExpectation]];
+    const extras = [
+      ["What is your salary expectation?", profile && profile.salaryExpectation],
+      ["How did you hear about us?", M.sourceLabel(vacante && vacante.fuente)],
+    ];
     const items = M.withDefaults(M.parseAnswers(raw), extras);
     const result = { filled: [], pending: [], review: [], unmatched: [] };
 
