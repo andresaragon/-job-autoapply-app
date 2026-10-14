@@ -7,7 +7,8 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint .",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "test:extension": "node --test extension/test/matcher.test.mjs"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.32.1",

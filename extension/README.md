@@ -19,6 +19,34 @@ Extensión de navegador para Google Chrome y Microsoft Edge diseñada para **aut
 4. **Sincronización Bidireccional con JobAutoApply Web:**
    - Botón directo para sincronizar tu perfil persistente desde `http://localhost:3000/api/profile` con un solo clic.
 
+5. **Respuestas del tracker (v1.1):**
+   - Se conecta a `empleo.vacantes` (tracker del pipeline diario) a través de la Edge Function `empleo-autofill`.
+   - Detecta qué vacante corresponde a la pestaña abierta (URL, id del ATS o empresa) o te deja elegirla.
+   - Rellena las preguntas del formulario con `respuestas_sugeridas` y la carta, emparejando cada etiqueta por intención (autorización EE.UU., visa, ubicación, años de Python/SQL, salario…) o por similitud de palabras.
+   - Selects y radios de sí/no: elige la opción según la respuesta ("No. I'm based in Colombia…" → **No**).
+   - **Naranja = revisar a mano:** datos pendientes (`[COMPLETAR]`), respuestas más largas que el límite del campo (nunca se recortan) y preguntas obligatorias sin respuesta.
+   - Botón **"Ya la envié: marcar como postulada"**: solo cambia `propuesta → postulada` y pone seguimiento a 7 días.
+   - **Nunca envía el formulario ni sube archivos.** El clic en *Enviar* y el CV (EN/ES según `cv_sugerido`) son tuyos.
+
+---
+
+## 🔌 Conectar con el tracker (una sola vez)
+
+1. Desplegar la función (desde la raíz del repo, con el CLI de Supabase enlazado al proyecto del tracker):
+   ```bash
+   supabase secrets set AUTOFILL_TOKEN=$(openssl rand -hex 24)
+   supabase functions deploy empleo-autofill --no-verify-jwt
+   ```
+2. En el popup → **Conexión con el tracker**: pega la URL `https://<proyecto>.supabase.co/functions/v1/empleo-autofill` y el mismo token. Guardar.
+3. Recarga la extensión en `chrome://extensions` después de actualizar el código.
+
+## 🧪 Tests
+
+```bash
+npm run test:extension
+```
+Cubre el parser de respuestas, el emparejamiento de preguntas (incluido que nunca conteste "autorizado en EE.UU." con la respuesta de ubicación) y la detección de la vacante por URL. `test/fixtures/greenhouse-like.html` sirve para probar el content script en un navegador.
+
 ---
 
 ## 🚀 Cómo instalar la extensión en Chrome o Edge

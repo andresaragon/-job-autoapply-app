@@ -13,11 +13,11 @@ chrome.runtime.onInstalled.addListener(async (details) => {
           firstName: "Santiago",
           lastName: "Aragón",
           email: "santiagoaragon.sistemas@gmail.com",
-          phone: "+57 300 000 0000",
-          linkedin: "https://linkedin.com/in/santiagoaragon",
+          phone: "",
+          linkedin: "https://linkedin.com/in/santiagoaragonguzman",
           github: "https://github.com/andresaragon",
-          portfolio: "https://santiagoaragon.dev",
-          location: "Bogotá, Colombia (Remoto)",
+          portfolio: "",
+          location: "Cali, Colombia",
           appUrl: "http://localhost:3000"
         }
       });

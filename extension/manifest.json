@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "JobAutoApply Assistant — Auto-Fill ATS",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Autollenado inteligente de formularios de empleo en 1-clic para Greenhouse, Lever, Ashby, Workday y portales de empleo.",
   "permissions": [
     "activeTab",
@@ -17,6 +17,8 @@
     "*://*.smartrecruiters.com/*",
     "*://*.bamboohr.com/*",
     "*://*.workable.com/*",
+    "*://*.getonbrd.com/*",
+    "https://*.supabase.co/*",
     "http://localhost:*/*",
     "http://127.0.0.1:*/*"
   ],

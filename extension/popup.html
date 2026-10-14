@@ -34,8 +34,33 @@
           <span class="btn-icon">⚡</span>
           <span class="btn-label">Auto-Fill en 1-Clic</span>
         </button>
-        <p class="hint">Rellena nombre, email, enlaces y datos de contacto respetando validaciones del portal.</p>
+        <p class="hint">Rellena tus datos de contacto y, si eliges una vacante del tracker, sus preguntas. Los campos en naranja son para revisar a mano. Tú das clic en Enviar.</p>
       </div>
+
+      <!-- Vacante del tracker (empleo.vacantes) -->
+      <section class="section" id="tracker-section">
+        <div class="section-header">
+          <h2 class="section-title">Vacante del tracker</h2>
+          <button id="btn-reload-tracker" class="btn-text" title="Volver a cargar las propuestas">↻</button>
+        </div>
+        <select id="vacante-select" class="vacante-select">
+          <option value="">— Sin vacante: solo datos de contacto —</option>
+        </select>
+        <p id="vacante-info" class="hint"></p>
+        <button id="btn-mark-applied" class="btn btn-success hidden">✓ Ya la envié: marcar como postulada</button>
+        <details class="tracker-config">
+          <summary>Conexión con el tracker</summary>
+          <div class="form-group">
+            <label for="input-tracker-url">URL de la función</label>
+            <input type="url" id="input-tracker-url" placeholder="https://xxxx.supabase.co/functions/v1/empleo-autofill">
+          </div>
+          <div class="form-group">
+            <label for="input-tracker-token">Token</label>
+            <input type="password" id="input-tracker-token" placeholder="AUTOFILL_TOKEN">
+          </div>
+          <button id="btn-save-tracker" class="btn btn-secondary">Guardar conexión</button>
+        </details>
+      </section>
 
       <!-- Result Card -->
       <div id="result-box" class="result-box hidden">
@@ -140,6 +165,7 @@
     </footer>
   </div>
 
+  <script src="matcher.js"></script>
   <script src="popup.js"></script>
 </body>
 </html>
