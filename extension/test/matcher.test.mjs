@@ -97,3 +97,17 @@ test("encuentra la vacante del tracker para la pestaña abierta", () => {
   assert.equal(M.matchVacante("https://jobs.ashbyhq.com/clanx/999/application", vacantes).vacante.id, 3);
   assert.equal(M.matchVacante("https://jobs.lever.co/otraempresa/xyz", vacantes), null);
 });
+
+test("el salario del perfil reemplaza al pendiente del tracker, no a una respuesta real", () => {
+  const extras = [["What is your salary expectation?", "USD 3,500/month"]];
+  const conPendiente = M.withDefaults(M.parseAnswers(NEW_FORMAT), extras);
+  const m = M.matchQuestion("What is your salary expectation?", conPendiente);
+  assert.equal(m.item.answer, "USD 3,500/month");
+  assert.equal(m.item.pending, false);
+
+  const conRespuesta = M.withDefaults(M.parseAnswers("### Salary expectation\nUSD 40/hour"), extras);
+  assert.equal(M.matchQuestion("Expected salary?", conRespuesta).item.answer, "USD 40/hour");
+
+  const sinPerfil = M.withDefaults(M.parseAnswers(NEW_FORMAT), [["What is your salary expectation?", ""]]);
+  assert.equal(M.matchQuestion("What is your salary expectation?", sinPerfil).item.pending, true);
+});

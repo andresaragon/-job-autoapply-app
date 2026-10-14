@@ -201,9 +201,21 @@
     ["How many years of experience do you have with SQL?", "5+ years, professionally (SQL, PL/SQL, Oracle)."],
   ].map(([q, a]) => makeItem(q, a, null));
 
-  function withDefaults(items) {
-    const have = new Set(items.map((i) => i.intent).filter(Boolean));
-    return items.concat(DEFAULT_ANSWERS.filter((d) => !have.has(d.intent)));
+  /**
+   * `extras` son respuestas del perfil ([pregunta, respuesta]). Reemplazan a la respuesta del
+   * tracker con su misma intención solo si esa está pendiente ([COMPLETAR]) o no existe.
+   */
+  function withDefaults(items, extras = []) {
+    let result = items.slice();
+    for (const [q, a] of extras) {
+      if (!a) continue;
+      const extra = makeItem(q, a, null);
+      if (!extra.intent || extra.pending) continue;
+      if (result.some((i) => i.intent === extra.intent && !i.pending)) continue;
+      result = result.filter((i) => i.intent !== extra.intent).concat(extra);
+    }
+    const have = new Set(result.map((i) => i.intent).filter(Boolean));
+    return result.concat(DEFAULT_ANSWERS.filter((d) => !have.has(d.intent)));
   }
 
   function slug(text) {

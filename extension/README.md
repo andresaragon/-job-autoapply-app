@@ -45,6 +45,11 @@ Extensión de navegador para Google Chrome y Microsoft Edge diseñada para **aut
 ```bash
 npm run test:extension
 ```
+```bash
+npm run test:extension:e2e   # primera vez: npx playwright install chromium
+```
+Abre Chromium con la extensión real sobre `test/fixtures/greenhouse-like.html` y comprueba qué queda en verde y qué en naranja (radios obligatorios, salario del perfil, campos que el portal vacía como la ubicación de Lever). No necesita red ni token.
+
 Cubre el parser de respuestas, el emparejamiento de preguntas (incluido que nunca conteste "autorizado en EE.UU." con la respuesta de ubicación) y la detección de la vacante por URL. `test/fixtures/greenhouse-like.html` sirve para probar el content script en un navegador.
 
 ---

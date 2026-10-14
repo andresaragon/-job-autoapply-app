@@ -23,5 +23,11 @@
   </fieldset>
   <div class="field"><label for="cover_letter_text">Cover Letter</label><textarea id="cover_letter_text"></textarea></div>
   <div class="field"><label for="resume">Resume/CV*</label><input id="resume" type="file" required></div>
+  <div class="field"><label for="location">Current location</label><input id="location" name="location"></div>
 </form>
+<script>
+  // Como el autocompletado de ubicación de Lever: si no se elige una opción de su lista, vacía el campo.
+  const loc = document.getElementById("location");
+  loc.addEventListener("blur", () => setTimeout(() => { if (!loc.dataset.selected) loc.value = ""; }, 200));
+</script>
 </body></html>

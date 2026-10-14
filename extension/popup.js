@@ -34,6 +34,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   const inputGithub = document.getElementById("input-github");
   const inputPortfolio = document.getElementById("input-portfolio");
   const inputLocation = document.getElementById("input-location");
+  const inputSalary = document.getElementById("input-salary");
   const inputCoverLetter = document.getElementById("input-coverletter");
 
   let currentProfile = null;
@@ -169,6 +170,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     inputGithub.value = currentProfile.github || "";
     inputPortfolio.value = currentProfile.portfolio || "";
     inputLocation.value = currentProfile.location || "";
+    inputSalary.value = currentProfile.salaryExpectation || "";
     inputCoverLetter.value = currentProfile.coverLetter || "";
   }
 
@@ -270,7 +272,10 @@ document.addEventListener("DOMContentLoaded", async () => {
         const fieldsStr = (response.filledFields || []).join(", ");
         resultDesc.textContent = `${count} campo(s) completados [${fieldsStr || "Datos de contacto"}]. Revisa y pulsa Enviar.`;
         const a = response.answers;
-        const toReview = a ? [...a.pending.map((q) => `Falta el dato: ${q}`), ...a.review, ...a.unmatched.map((q) => `Sin respuesta: ${q}`)] : [];
+        const toReview = [
+          ...(a ? [...a.pending.map((q) => `Falta el dato: ${q}`), ...a.review, ...a.unmatched.map((q) => `Sin respuesta: ${q}`)] : []),
+          ...(response.cleared || []).map((q) => `No quedó guardado (elígelo de la lista del portal): ${q}`)
+        ];
         if (toReview.length) {
           const ul = document.createElement("ul");
           ul.className = "review-list";
@@ -322,6 +327,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       github: inputGithub.value.trim(),
       portfolio: inputPortfolio.value.trim(),
       location: inputLocation.value.trim(),
+      salaryExpectation: inputSalary.value.trim(),
       coverLetter: inputCoverLetter.value.trim(),
       appUrl: currentProfile?.appUrl || "http://localhost:3000"
     };
