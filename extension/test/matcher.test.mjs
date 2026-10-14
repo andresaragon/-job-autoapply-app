@@ -111,3 +111,14 @@ test("el salario del perfil reemplaza al pendiente del tracker, no a una respues
   const sinPerfil = M.withDefaults(M.parseAnswers(NEW_FORMAT), [["What is your salary expectation?", ""]]);
   assert.equal(M.matchQuestion("What is your salary expectation?", sinPerfil).item.pending, true);
 });
+
+test("contratista y 'how did you hear' tienen respuesta por defecto", () => {
+  const items = M.withDefaults([], [["How did you hear about us?", M.sourceLabel("linkedin")]]);
+  const c = M.matchQuestion("Are you comfortable working as an independent contractor?*", items);
+  assert.equal(c.item.intent, "contractor");
+  assert.equal(M.pickOption(["Yes", "No"], c.item.answer), 0);
+  assert.equal(M.matchQuestion("How did you hear about us?", items).item.answer, "LinkedIn");
+  assert.equal(M.sourceLabel("getonboard"), "Get on Board");
+  assert.equal(M.sourceLabel("greenhouse"), "Online job board");
+  assert.equal(M.sourceLabel(null), "");
+});

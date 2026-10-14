@@ -21,6 +21,7 @@
     { id: "us_auth", re: /(authori[sz]ed|eligible|legally).*(work).*(united states|u\.?s\.?a?\b|us\b)|work authori[sz]ation|autorizad[oa].*(trabajar|laborar)/ },
     { id: "based", re: /where are you (based|located)|current location|country of residence|where do you (live|reside)|en que (pais|ciudad) (vives|resides)|ubicacion|^location$|^(location|city|country)\b/ },
     { id: "heard", re: /how did you (hear|find|learn)|where did you (hear|find)|como te enteraste|referral source|^source$/ },
+    { id: "contractor", re: /independent contractor|as a contractor|contractor (basis|role|position|agreement)|\b1099\b|contratista/ },
     { id: "python_years", re: /(years|anos).*(python)|python.*(years|anos|experience)/ },
     { id: "sql_years", re: /(years|anos).*(sql|pl\/?sql|oracle|database)|(sql|pl\/?sql|oracle).*(years|anos)/ },
     { id: "consulting", re: /consult(ing|ancy)|agency/ },
@@ -199,7 +200,27 @@
       "I don't have professional Python experience yet; I've used it in personal projects (a text-to-SQL RAG system with local LLMs, data work with Pandas/NumPy). My professional experience is 5+ years in SQL and PL/SQL/Oracle.",
     ],
     ["How many years of experience do you have with SQL?", "5+ years, professionally (SQL, PL/SQL, Oracle)."],
+    ["Are you comfortable working as an independent contractor?", "Yes. I'm open to working as an independent contractor, paid in USD."],
   ].map(([q, a]) => makeItem(q, a, null));
+
+  // "How did you hear about us?" según la fuente del tracker (empleo.vacantes.fuente).
+  const SOURCE_LABELS = {
+    linkedin: "LinkedIn",
+    indeed: "Indeed",
+    getonboard: "Get on Board",
+    himalayas: "Himalayas",
+    torre: "Torre",
+    jobgether: "Jobgether",
+    themuse: "The Muse",
+    remotive: "Remotive",
+    weworkremotely: "We Work Remotely",
+  };
+
+  function sourceLabel(fuente) {
+    const key = String(fuente || "").toLowerCase().replace(/[^a-z]/g, "");
+    if (!key) return "";
+    return SOURCE_LABELS[key] || "Online job board";
+  }
 
   /**
    * `extras` son respuestas del perfil ([pregunta, respuesta]). Reemplazan a la respuesta del
@@ -261,7 +282,7 @@
     return null;
   }
 
-  const api = { matchVacante, urlKey, withDefaults, DEFAULT_ANSWERS, normalize, tokens, detectIntent, parseAnswers, matchQuestion, pickOption, yesNoFromAnswer, parseLimit, stripLimit, PENDING_RE };
+  const api = { matchVacante, urlKey, withDefaults, sourceLabel, DEFAULT_ANSWERS, normalize, tokens, detectIntent, parseAnswers, matchQuestion, pickOption, yesNoFromAnswer, parseLimit, stripLimit, PENDING_RE };
 
   if (typeof module !== "undefined" && module.exports) module.exports = api;
   root.JobAutoApplyMatcher = api;

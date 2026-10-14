@@ -48,7 +48,7 @@ Deno.serve(async (req) => {
   try {
     if (req.method === "GET") {
       const rows = await sql`
-        select id, empresa, titulo, url, fuente_job_id, notas, carta, respuestas_sugeridas, cv_sugerido, relacion, salario, creado_en
+        select id, fuente, empresa, titulo, url, fuente_job_id, notas, carta, respuestas_sugeridas, cv_sugerido, relacion, salario, creado_en
         from empleo.vacantes
         where estado = 'propuesta'
         order by creado_en desc
